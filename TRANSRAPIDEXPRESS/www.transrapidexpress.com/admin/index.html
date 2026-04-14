@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Transrapidexpress | Admin Portal</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Leaflet CSS for Maps -->
+<link crossorigin="" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" rel="stylesheet">
+<!-- Custom CSS -->
+<link href="css/style.css" rel="stylesheet"/>
+<!-- FontAwesome for Icons -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+</link></head>
+<body class="dark-theme">
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<!-- Auth Overlay (Simple Password Lock) -->
+<div class="auth-overlay" id="authOverlay">
+<div class="auth-card glass-panel">
+<div class="auth-header">
+<img alt="Logo" class="auth-logo" src="../logo-light.png"/>
+<h2>Admin Identity Required</h2>
+<p>Enter passphrase to access the global logistics network.</p>
+</div>
+<div class="input-group">
+<input id="adminPassphrase" placeholder="Passphrase..." type="password"/>
+<button class="btn-primary" id="loginBtn">Authenticate</button>
+</div>
+<p class="error-msg" id="authError"></p>
+</div>
+</div>
+<!-- Main Admin Layout -->
+<div class="app-layout" id="appLayout" style="display: none;">
+<!-- Sidebar -->
+<aside class="sidebar glass-panel">
+<div class="sidebar-brand">
+<img alt="Logo" src="../logo-light.png"/>
+<span>Admin</span>
+</div>
+<nav class="sidebar-nav">
+<a class="nav-item active" data-tab="dashboard" href="#"><i class="fa-solid fa-chart-pie"></i> Dashboard</a>
+<a class="nav-item" data-tab="create-shipment" href="#"><i class="fa-solid fa-box-open"></i> Create Shipment</a>
+<a class="nav-item" data-tab="manage-shipments" href="#"><i class="fa-solid fa-list-check"></i> Manage Records</a>
+<a class="nav-item" data-tab="settings" href="#"><i class="fa-solid fa-gear"></i> Settings</a>
+</nav>
+<div class="sidebar-footer">
+<div class="admin-profile">
+<div class="avatar">A</div>
+<div class="info">
+<strong>Commander</strong>
+<span>System Admin</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="main-content">
+<!-- Topbar -->
+<header class="topbar">
+<div class="menu-toggle" id="menuToggle"><i class="fa-solid fa-bars"></i></div>
+<div class="search-bar">
+<i class="fa-solid fa-magnifying-glass"></i>
+<input placeholder="Search tracking codes..." type="text"/>
+</div>
+<div class="topbar-actions">
+<button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
+<button class="icon-btn" id="logoutBtn"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+</div>
+</header>
+<!-- Dashboard View -->
+<section class="view-section active" id="view-dashboard">
+<div class="page-header">
+<h1>Dashboard Overview</h1>
+<p>Welcome back! Here's your global logistics performance.</p>
+</div>
+<div class="stats-grid">
+<div class="stat-card glass-panel">
+<div class="stat-info">
+<span class="label">TOTAL SHIPMENTS</span>
+<h2 id="stat-total">0</h2>
+<span class="trend positive"><i class="fa-solid fa-arrow-up-right-dots"></i> Global sync active</span>
+</div>
+<div class="stat-icon bg-blue"><i class="fa-solid fa-box"></i></div>
+</div>
+<div class="stat-card glass-panel">
+<div class="stat-info">
+<span class="label">IN TRANSIT</span>
+<h2 id="stat-transit">0</h2>
+<span class="trend">Active on the move</span>
+</div>
+<div class="stat-icon bg-orange"><i class="fa-solid fa-truck-fast"></i></div>
+</div>
+</div>
+<!-- Recent Activity Table -->
+<div class="recent-shipments glass-panel mt-4">
+<div class="panel-header">
+<h3>Recent Shipments</h3>
+<button class="btn-outline btn-sm" id="goToCreateBtn">+ New</button>
+</div>
+<div class="table-responsive">
+<table id="recentTable">
+<thead>
+<tr>
+<th>Tracking Code</th>
+<th>Receiver</th>
+<th>Destination</th>
+<th>Status</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody>
+<!-- JS populated -->
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<!-- Create Shipment View -->
+<section class="view-section" id="view-create-shipment" style="display: none;">
+<div class="page-header flex-between">
+<div>
+<h1>New Shipment Routing</h1>
+<p>Generate tracking codes and plot map directions.</p>
+</div>
+<button class="btn-primary" id="generateTrackingBtn"><i class="fa-solid fa-barcode"></i> Generate Code</button>
+</div>
+<div class="gen-result glass-panel hidden" id="genResultBox">
+<div class="success-icon"><i class="fa-solid fa-circle-check"></i></div>
+<div>
+<h3>Tracking Generated Successfully!</h3>
+<div class="codes-display">
+<div class="code-box">
+<small>Tracking Number</small>
+<strong id="displayTrk">--</strong>
+</div>
+<div class="code-box">
+<small>Secret PIN</small>
+<strong id="displayPin">--</strong>
+</div>
+</div>
+<p class="text-xs text-muted mt-2">Data synced to Firebase. Hand these over to the customer.</p>
+</div>
+</div>
+<div class="form-grid">
+<!-- Left Column: Details -->
+<div class="form-column">
+<div class="glass-panel form-panel">
+<h3><i class="fa-solid fa-cube"></i> Product Information</h3>
+<div class="input-group">
+<label>Package Name / Item</label>
+<input id="pkgName" placeholder="e.g. 2022 Dodge RAM Engine" type="text"/>
+</div>
+<div class="input-row">
+<div class="input-group">
+<label>Weight</label>
+<input id="pkgWeight" placeholder="e.g. 150 kg" type="text"/>
+</div>
+<div class="input-group">
+<label>Declared Value</label>
+<input id="pkgValue" placeholder="$5,000" type="text"/>
+</div>
+</div>
+<div class="input-group">
+<label>Description (Status Note)</label>
+<input id="pkgDesc" placeholder="Currently on hold, inspecting..." type="text"/>
+</div>
+<div class="input-row">
+<div class="input-group">
+<label>Transportation Mode</label>
+<select id="pkgTransport">
+<option value="LAND">LAND</option>
+<option value="AIR">AIR</option>
+<option value="OCEAN">OCEAN</option>
+</select>
+</div>
+<div class="input-group">
+<label>Current Status</label>
+<select id="pkgStatus">
+<option value="Pending">Pending</option>
+<option value="In Transit">In Transit</option>
+<option value="On Hold">On Hold</option>
+<option value="Delivered">Delivered</option>
+</select>
+</div>
+</div>
+<div class="input-group">
+<label>Estimated Delivery Date</label>
+<input id="pkgEstDelivery" placeholder="March 15, 2026" type="text"/>
+</div>
+</div>
+<div class="glass-panel form-panel mt-4">
+<h3><i class="fa-solid fa-users"></i> Contact Data</h3>
+<div class="input-row">
+<div class="input-group">
+<label>Sender Name</label>
+<input id="senderName" type="text"/>
+</div>
+<div class="input-group">
+<label>Receiver Name</label>
+<input id="receiverName" type="text"/>
+</div>
+</div>
+<div class="input-row">
+<div class="input-group">
+<label>Sender Email</label>
+<input id="senderEmail" type="email"/>
+</div>
+<div class="input-group">
+<label>Receiver Email</label>
+<input id="receiverEmail" type="email"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Map -->
+<div class="form-column">
+<div class="glass-panel form-panel map-panel">
+<h3><i class="fa-solid fa-map-location-dot"></i> Live Shipment Map Control</h3>
+<p class="text-sm text-muted mb-3">Click on the map to plot locations. First click is Origin, last is Current Location.</p>
+<div class="map-search">
+<input id="mapSearchInput" placeholder="Search a city or country to zoom..." type="text"/>
+<button class="btn-primary btn-sm" id="mapSearchBtn"><i class="fa-solid fa-search"></i></button>
+</div>
+<div id="adminMap" style="height: 350px; border-radius: 8px; z-index: 1;"></div>
+<div class="map-controls mt-3">
+<button class="btn-outline btn-sm" id="undoMapBtn"><i class="fa-solid fa-rotate-left"></i> Undo Last</button>
+<button class="btn-outline btn-sm" id="clearMapBtn"><i class="fa-solid fa-eraser"></i> Clear Route</button>
+<span class="text-sm ml-2" id="waypointsCount">0 stops plotted</span>
+</div>
+<div class="timeline-editor mt-4" id="timelineEditor">
+<h4>Location History Detail</h4>
+<div class="timeline-list" id="timelineList">
+<!-- Dynamic stops go here -->
+</div>
+</div>
+<button class="btn-primary w-full mt-4" id="saveShipmentBtn"><i class="fa-solid fa-cloud-arrow-up"></i> Save &amp; Sync Globally</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Settings View -->
+<section class="view-section" id="view-settings" style="display: none;">
+<div class="page-header">
+<h1>System Configuration</h1>
+<p>Manage database connections, security, and application settings.</p>
+</div>
+<div class="form-grid">
+<div class="glass-panel form-panel">
+<h3><i class="fa-solid fa-database"></i> Database Management</h3>
+<p class="text-sm text-muted mb-4">Currently awaiting Supabase keys. Connect Supabase for worldwide persistence.</p>
+<div class="input-group">
+<label>Supabase Project Config</label>
+<textarea placeholder="SUPABASE_URL = 'https://xyz.supabase.co'
+SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIn...'" rows="4" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,159,28,0.5); width: 100%; color: var(--text-muted); padding: 10px; border-radius: 8px; font-family: monospace;"></textarea>
+</div>
+<button class="btn-primary mt-2">Connect Supabase</button>
+<div class="mt-4 pt-4" style="border-top: 1px solid rgba(255,255,255,0.1)">
+<h4 style="color: #E71D36">Danger Zone</h4>
+<p class="text-xs text-muted mb-3">Wipe all simulated shipments and tracking numbers from memory.</p>
+<button class="btn-outline" id="wipeDbBtn" style="border-color: #E71D36; color: #E71D36;">Purge Database Memory</button>
+</div>
+</div>
+<div class="glass-panel form-panel">
+<h3><i class="fa-solid fa-shield-halved"></i> Security &amp; Access</h3>
+<div class="input-group mt-3">
+<label>Admin Identity Passphrase</label>
+<input disabled="" type="password" value="********"/>
+<p class="text-xs text-muted mt-1">Passphrase is currently locked to system default.</p>
+</div>
+<h3 class="mt-4 pt-4" style="border-top: 1px solid rgba(255,255,255,0.1)"><i class="fa-solid fa-palette"></i> Display Preferences</h3>
+<div class="input-group mt-3">
+<label>Default Map Rendering Protocol</label>
+<select>
+<option value="carto">Standard OpenStreet</option>
+<option value="dark">Dark Cartographic Mode</option>
+<option value="satellite">Satellite Topography</option>
+</select>
+</div>
+</div>
+</div>
+</section>
+</main>
+</div>
+<!-- Leaflet JS -->
+<script crossorigin="" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Firebase SDk 9+ (Modular) via modules -->
+<script src="js/app.js" type="module"></script>
+<script defer="" src="../js/site-fix.js"></script>
+<script defer="" src="js/track-sync-v3.js"></script></body>
+</html>
