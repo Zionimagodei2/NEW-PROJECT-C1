@@ -191,9 +191,9 @@ window.addEventListener('DOMContentLoaded', () => {
     // Append our overlay right to the body 
     document.body.appendChild(overlay);
 
-    // Auto-show logic
+    // Auto-show logic (unless disabled)
     const path = window.location.pathname;
-    if (path.includes('track.html') || path.endsWith('/track')) {
+    if (!window.DISABLE_TRACK_OVERLAY && (path.includes('track.html') || path.endsWith('/track'))) {
         overlay.style.display = 'block';
     }
 
