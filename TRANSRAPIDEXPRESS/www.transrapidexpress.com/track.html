@@ -408,6 +408,20 @@
         </div>
     </footer>
 
+    <script>
+        // Pre-fill tracking code from URL parameter
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var code = params.get('code');
+            if (code) {
+                document.addEventListener('DOMContentLoaded', function() {
+                    var input = document.getElementById('main-track-code');
+                    if (input) input.value = code;
+                    input && input.focus();
+                });
+            }
+        })();
+    </script>
     <script defer src="js/site-fix.js"></script>
     <script defer src="js/track-sync-v3.js"></script>
     <!--Start of Tawk.to Script-->

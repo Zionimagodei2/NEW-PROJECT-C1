@@ -163,11 +163,53 @@
     
     if (!menuBtn || !drawer) return;
     
-    // Make sure drawer content is visible by ensuring text color is set
-    const drawerContent = drawer.querySelector('.flex-1');
-    if (drawerContent) {
-      drawerContent.style.color = 'var(--foreground, #111827)';
+    // Force drawer to be properly styled and visible when opened
+    drawer.style.willChange = 'transform';
+    
+    // Ensure all text inside the drawer is visible by applying explicit colors
+    // This overrides any CSS variable issues
+    var isDark = document.documentElement.classList.contains('dark');
+    function applyMenuColors() {
+      isDark = document.documentElement.classList.contains('dark');
+      var fg = isDark ? '#f8f6f1' : '#111827';
+      var muted = isDark ? '#94a3b8' : '#6b7280';
+      var bg = isDark ? '#0a1628' : '#ffffff';
+      var hoverBg = isDark ? 'rgba(200,164,94,0.1)' : '#f3f4f6';
+      var accent = '#c8a45e';
+      
+      drawer.style.backgroundColor = bg;
+      drawer.style.color = fg;
+      
+      // Style all links inside the drawer
+      drawer.querySelectorAll('a').forEach(function(a) {
+        if (!a.closest('.overflow-hidden')) {
+          // Top-level links
+          a.style.color = fg;
+        } else {
+          // Sub-menu links
+          a.style.color = muted;
+        }
+      });
+      
+      // Style sub-menu labels
+      drawer.querySelectorAll('.flex-1.py-1').forEach(function(el) {
+        el.style.color = fg;
+      });
+      
+      // Style all buttons
+      drawer.querySelectorAll('button').forEach(function(btn) {
+        btn.style.color = fg;
+      });
+      
+      // Style the Track Shipment button at the bottom
+      var trackBtn = drawer.querySelector('a[href="track.html"] button, a[href="/track"] button');
+      if (trackBtn) {
+        trackBtn.style.backgroundColor = accent;
+        trackBtn.style.color = '#ffffff';
+      }
     }
+    
+    applyMenuColors();
 
     // Add a close button at the top of the drawer if not already present
     let closeBtn = drawer.querySelector('.mobile-menu-close-btn');
@@ -185,16 +227,15 @@
         border-radius: 8px;
         border: none;
         background: transparent;
-        color: var(--foreground, #111827);
         cursor: pointer;
         transition: background 0.2s;
         margin-left: auto;
         margin-bottom: 8px;
       `;
-      closeBtn.addEventListener('mouseenter', () => {
-        closeBtn.style.backgroundColor = 'var(--secondary, #f3f4f6)';
+      closeBtn.addEventListener('mouseenter', function() {
+        closeBtn.style.backgroundColor = isDark ? 'rgba(200,164,94,0.1)' : '#f3f4f6';
       });
-      closeBtn.addEventListener('mouseleave', () => {
+      closeBtn.addEventListener('mouseleave', function() {
         closeBtn.style.backgroundColor = 'transparent';
       });
 
@@ -211,30 +252,45 @@
 
     let isOpen = false;
 
+    // Remove any existing click handlers by cloning the button
+    // This is critical to prevent Next.js React handlers from interfering
+    var newMenuBtn = menuBtn.cloneNode(true);
+    menuBtn.parentNode.replaceChild(newMenuBtn, menuBtn);
+    
+    var activeBackdrop = backdrop;
+    if (backdrop) {
+      var newBackdrop = backdrop.cloneNode(true);
+      backdrop.parentNode.replaceChild(newBackdrop, backdrop);
+      activeBackdrop = newBackdrop;
+    }
+
     function openMenu() {
       isOpen = true;
-      menuBtn.setAttribute('aria-expanded', 'true');
+      newMenuBtn.setAttribute('aria-expanded', 'true');
       drawer.style.transform = 'translateX(0)';
-      if (backdrop) {
-        backdrop.style.opacity = '1';
-        backdrop.style.pointerEvents = 'auto';
+      if (activeBackdrop) {
+        activeBackdrop.style.opacity = '1';
+        activeBackdrop.style.pointerEvents = 'auto';
       }
       document.body.style.overflow = 'hidden';
+      applyMenuColors();
     }
 
     function closeMenu() {
       isOpen = false;
-      menuBtn.setAttribute('aria-expanded', 'false');
+      newMenuBtn.setAttribute('aria-expanded', 'false');
       drawer.style.transform = 'translateX(100%)';
-      if (backdrop) {
-        backdrop.style.opacity = '0';
-        backdrop.style.pointerEvents = 'none';
+      if (activeBackdrop) {
+        activeBackdrop.style.opacity = '0';
+        activeBackdrop.style.pointerEvents = 'none';
       }
       document.body.style.overflow = '';
     }
-
-    menuBtn.addEventListener('click', function (e) {
+    
+    newMenuBtn.addEventListener('click', function (e) {
+      e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation();
       if (isOpen) {
         closeMenu();
       } else {
@@ -242,8 +298,8 @@
       }
     });
     
-    if (backdrop) {
-      backdrop.addEventListener('click', closeMenu);
+    if (activeBackdrop) {
+      activeBackdrop.addEventListener('click', closeMenu);
     }
 
     if (closeBtn) {
@@ -265,55 +321,38 @@
     });
     
     // Mobile sub-menu toggles
-    const subMenuBtns = drawer.querySelectorAll('button.p-1\\.5');
-    subMenuBtns.forEach(btn => {
-      btn.addEventListener('click', function (e) {
+    drawer.querySelectorAll('button.p-1\\.5, button.hover\\:bg-secondary').forEach(btn => {
+      // Clone to remove any existing handlers from Next.js
+      var newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
+      
+      newBtn.addEventListener('click', function (e) {
         e.stopPropagation();
         e.preventDefault();
-        const container = btn.closest('.flex.flex-col');
-        const submenu = container ? container.querySelector('.overflow-hidden') : null;
+        var container = newBtn.closest('.flex.flex-col');
+        var submenu = container ? container.querySelector('.overflow-hidden') : null;
         if (!submenu) return;
         
-        const isExpanded = submenu.style.maxHeight && submenu.style.maxHeight !== '0px';
+        var isExpanded = submenu.style.maxHeight && submenu.style.maxHeight !== '0px' && submenu.style.maxHeight !== '';
         if (isExpanded) {
           submenu.style.maxHeight = '0px';
           submenu.style.opacity = '0';
-          const svg = btn.querySelector('svg');
+          var svg = newBtn.querySelector('svg');
           if (svg) svg.style.transform = 'rotate(0deg)';
         } else {
           submenu.style.maxHeight = '500px';
           submenu.style.opacity = '1';
-          const svg = btn.querySelector('svg');
+          var svg = newBtn.querySelector('svg');
           if (svg) svg.style.transform = 'rotate(180deg)';
         }
       });
     });
-
-    // Also handle sub-menu toggles that use different button class patterns
-    const altSubMenuBtns = drawer.querySelectorAll('button.hover\\:bg-secondary');
-    altSubMenuBtns.forEach(btn => {
-      // Skip if already handled by p-1.5 selector
-      if (btn.classList.contains('p-1.5')) return;
-      // Check if this is a chevron button (contains only SVG)
-      if (btn.querySelector('svg') && btn.textContent.trim() === '') {
-        btn.addEventListener('click', function (e) {
-          e.stopPropagation();
-          e.preventDefault();
-          const container = btn.closest('.flex.flex-col');
-          const submenu = container ? container.querySelector('.overflow-hidden') : null;
-          if (!submenu) return;
-          
-          const isExpanded = submenu.style.maxHeight && submenu.style.maxHeight !== '0px';
-          if (isExpanded) {
-            submenu.style.maxHeight = '0px';
-            submenu.style.opacity = '0';
-          } else {
-            submenu.style.maxHeight = '500px';
-            submenu.style.opacity = '1';
-          }
-        });
-      }
+    
+    // Watch for theme changes to re-apply colors
+    var observer = new MutationObserver(function() {
+      applyMenuColors();
     });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
   }
 
   // ─── 4. THEME SWITCHER ───
