@@ -162,14 +162,40 @@
     const drawer = document.querySelector('.fixed.top-\\[64px\\].right-0.z-50.h-\\[calc\\(100dvh-64px\\)\\]');
     
     if (!menuBtn || !drawer) return;
-    
+
+    // ── CRITICAL FIX: Clone ALL three elements (button, backdrop, drawer) ──
+    // This breaks React's DOM references entirely, preventing React hydration
+    // or re-renders from wiping the drawer content or resetting classes/styles.
+    // React's virtual DOM still points to the OLD nodes which are now detached.
+    var newMenuBtn = menuBtn.cloneNode(true);
+    menuBtn.parentNode.replaceChild(newMenuBtn, menuBtn);
+
+    var activeBackdrop = null;
+    if (backdrop) {
+      var newBackdrop = backdrop.cloneNode(true);
+      backdrop.parentNode.replaceChild(newBackdrop, backdrop);
+      activeBackdrop = newBackdrop;
+    }
+
+    var newDrawer = drawer.cloneNode(true);
+    drawer.parentNode.replaceChild(newDrawer, drawer);
+    // From this point on, use newDrawer exclusively — React no longer controls it
+
     // Force drawer to be properly hidden initially
     // Tailwind v4 uses CSS 'translate' property, NOT 'transform'
-    drawer.style.willChange = 'translate';
+    newDrawer.style.willChange = 'translate';
     // Ensure the drawer starts off-screen
-    if (!drawer.classList.contains('translate-x-0')) {
-      drawer.classList.add('translate-x-full');
-    }
+    newDrawer.classList.remove('translate-x-0');
+    newDrawer.classList.add('translate-x-full');
+    // Explicitly set the closed translate state via inline style
+    // This overrides any stale class-based translate
+    newDrawer.style.translate = '100% 0';
+    // Fix: add a proper transition for the 'translate' CSS property
+    // The 'transition-transform' class in the HTML has NO CSS rule defined
+    // in Tailwind v4's output, so we set it manually
+    newDrawer.style.transitionProperty = 'translate';
+    newDrawer.style.transitionDuration = '300ms';
+    newDrawer.style.transitionTimingFunction = 'ease-in-out';
     
     // Ensure all text inside the drawer is visible by applying explicit colors
     // This overrides any CSS variable issues
@@ -179,35 +205,32 @@
       var fg = isDark ? '#f8f6f1' : '#111827';
       var muted = isDark ? '#94a3b8' : '#6b7280';
       var bg = isDark ? '#0a1628' : '#ffffff';
-      var hoverBg = isDark ? 'rgba(200,164,94,0.1)' : '#f3f4f6';
       var accent = '#c8a45e';
       
-      drawer.style.backgroundColor = bg;
-      drawer.style.color = fg;
+      newDrawer.style.backgroundColor = bg;
+      newDrawer.style.color = fg;
       
       // Style all links inside the drawer
-      drawer.querySelectorAll('a').forEach(function(a) {
+      newDrawer.querySelectorAll('a').forEach(function(a) {
         if (!a.closest('.overflow-hidden')) {
-          // Top-level links
           a.style.color = fg;
         } else {
-          // Sub-menu links
           a.style.color = muted;
         }
       });
       
       // Style sub-menu labels
-      drawer.querySelectorAll('.flex-1.py-1').forEach(function(el) {
+      newDrawer.querySelectorAll('.flex-1.py-1').forEach(function(el) {
         el.style.color = fg;
       });
       
       // Style all buttons
-      drawer.querySelectorAll('button').forEach(function(btn) {
+      newDrawer.querySelectorAll('button').forEach(function(btn) {
         btn.style.color = fg;
       });
       
       // Style the Track Shipment button at the bottom
-      var trackBtn = drawer.querySelector('a[href="track.html"] button, a[href="/track"] button');
+      var trackBtn = newDrawer.querySelector('a[href="track.html"] button, a[href="/track"] button');
       if (trackBtn) {
         trackBtn.style.backgroundColor = accent;
         trackBtn.style.color = '#ffffff';
@@ -217,7 +240,7 @@
     applyMenuColors();
 
     // Add a close button at the top of the drawer if not already present
-    let closeBtn = drawer.querySelector('.mobile-menu-close-btn');
+    let closeBtn = newDrawer.querySelector('.mobile-menu-close-btn');
     if (!closeBtn) {
       closeBtn = document.createElement('button');
       closeBtn.className = 'mobile-menu-close-btn';
@@ -244,11 +267,11 @@
         closeBtn.style.backgroundColor = 'transparent';
       });
 
-      const scrollContainer = drawer.querySelector('.flex-1.overflow-y-auto, .flex-1.flex.flex-col.overflow-y-auto');
+      const scrollContainer = newDrawer.querySelector('.flex-1.overflow-y-auto, .flex-1.flex.flex-col.overflow-y-auto');
       if (scrollContainer) {
         scrollContainer.insertBefore(closeBtn, scrollContainer.firstChild);
       } else {
-        const firstChild = drawer.querySelector('.flex-1');
+        const firstChild = newDrawer.querySelector('.flex-1');
         if (firstChild) {
           firstChild.insertBefore(closeBtn, firstChild.firstChild);
         }
@@ -257,25 +280,13 @@
 
     let isOpen = false;
 
-    // Remove any existing click handlers by cloning the button
-    // This is critical to prevent Next.js React handlers from interfering
-    var newMenuBtn = menuBtn.cloneNode(true);
-    menuBtn.parentNode.replaceChild(newMenuBtn, menuBtn);
-    
-    var activeBackdrop = backdrop;
-    if (backdrop) {
-      var newBackdrop = backdrop.cloneNode(true);
-      backdrop.parentNode.replaceChild(newBackdrop, backdrop);
-      activeBackdrop = newBackdrop;
-    }
-
     function openMenu() {
       isOpen = true;
       newMenuBtn.setAttribute('aria-expanded', 'true');
       // Tailwind v4 uses CSS 'translate' property, NOT 'transform'
-      drawer.style.translate = '0 0';
-      drawer.classList.remove('translate-x-full');
-      drawer.classList.add('translate-x-0');
+      newDrawer.style.translate = '0 0';
+      newDrawer.classList.remove('translate-x-full');
+      newDrawer.classList.add('translate-x-0');
       if (activeBackdrop) {
         activeBackdrop.style.opacity = '1';
         activeBackdrop.style.pointerEvents = 'auto';
@@ -288,9 +299,9 @@
       isOpen = false;
       newMenuBtn.setAttribute('aria-expanded', 'false');
       // Tailwind v4 uses CSS 'translate' property, NOT 'transform'
-      drawer.style.translate = '100% 0';
-      drawer.classList.remove('translate-x-0');
-      drawer.classList.add('translate-x-full');
+      newDrawer.style.translate = '100% 0';
+      newDrawer.classList.remove('translate-x-0');
+      newDrawer.classList.add('translate-x-full');
       if (activeBackdrop) {
         activeBackdrop.style.opacity = '0';
         activeBackdrop.style.pointerEvents = 'none';
@@ -325,22 +336,18 @@
     });
 
     // Close menu when clicking a link inside it
-    drawer.querySelectorAll('a').forEach(link => {
+    newDrawer.querySelectorAll('a').forEach(link => {
       link.addEventListener('click', function () {
         closeMenu();
       });
     });
     
-    // Mobile sub-menu toggles
-    drawer.querySelectorAll('button.p-1\\.5, button.hover\\:bg-secondary').forEach(btn => {
-      // Clone to remove any existing handlers from Next.js
-      var newBtn = btn.cloneNode(true);
-      btn.parentNode.replaceChild(newBtn, btn);
-      
-      newBtn.addEventListener('click', function (e) {
+    // Mobile sub-menu toggles — use broad selector to catch all accordion buttons
+    newDrawer.querySelectorAll('button.p-1\\.5, button.hover\\:bg-secondary, button[class*="chevron"]').forEach(btn => {
+      btn.addEventListener('click', function (e) {
         e.stopPropagation();
         e.preventDefault();
-        var container = newBtn.closest('.flex.flex-col');
+        var container = btn.closest('.flex.flex-col');
         var submenu = container ? container.querySelector('.overflow-hidden') : null;
         if (!submenu) return;
         
@@ -348,12 +355,12 @@
         if (isExpanded) {
           submenu.style.maxHeight = '0px';
           submenu.style.opacity = '0';
-          var svg = newBtn.querySelector('svg');
+          var svg = btn.querySelector('svg');
           if (svg) svg.style.transform = 'rotate(0deg)';
         } else {
           submenu.style.maxHeight = '500px';
           submenu.style.opacity = '1';
-          var svg = newBtn.querySelector('svg');
+          var svg = btn.querySelector('svg');
           if (svg) svg.style.transform = 'rotate(180deg)';
         }
       });
