@@ -293,35 +293,46 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('res-sender').textContent = ship.senderName || 'N/A';
         document.getElementById('res-receiver').textContent = ship.receiverName || 'N/A';
 
-        const lastLoc = ship.waypoints && ship.waypoints.length > 0 ? ship.waypoints[ship.waypoints.length - 1].name : 'Unknown';
-        document.getElementById('res-current-loc').textContent = 'Current Location: ' + lastLoc;
+        // Use currentPositionIndex to determine the current location
+        const cpIdx = ship.currentPositionIndex !== undefined ? ship.currentPositionIndex : (ship.waypoints ? ship.waypoints.length - 1 : -1);
+        const currentLoc = (ship.waypoints && ship.waypoints[cpIdx]) ? ship.waypoints[cpIdx].name : (ship.waypoints && ship.waypoints.length > 0 ? ship.waypoints[ship.waypoints.length - 1].name : 'Unknown');
+        document.getElementById('res-current-loc').textContent = 'Current Location: ' + currentLoc;
 
         // Populate Timeline
         const tlist = document.getElementById('res-timeline');
         tlist.innerHTML = '';
         if (ship.waypoints) {
             const wps = [...ship.waypoints].reverse();
+            // In the reversed array, the "current" item index is reversed too
+            const reversedCpIdx = ship.waypoints.length - 1 - cpIdx;
             wps.forEach((wp, index) => {
-                const isLatest = index === 0;
-                const currentBadge = isLatest ? '<span style="font-size:0.7em;color:#2ecc71;border:1px solid #2ecc71;padding:2px 6px;border-radius:10px;margin-left:10px;">CURRENT</span>' : '';
-                tlist.innerHTML += '<div class="timeline-item"><h4>' + wp.name + ' ' + currentBadge + '</h4><div class="timeline-date">' + wp.time + '</div><p style="color:#8892b0;font-size:0.85rem;">' + (wp.status || 'Location updated') + '</p></div>';
+                const isCurrent = index === reversedCpIdx;
+                const isOrigin = index === wps.length - 1; // last in reversed = first in original
+                let badge = '';
+                if (isCurrent) badge = '<span style="font-size:0.7em;color:#e74c3c;border:1px solid #e74c3c;padding:2px 6px;border-radius:10px;margin-left:10px;">CURRENT POSITION</span>';
+                if (isOrigin && !isCurrent) badge = '<span style="font-size:0.7em;color:#2ecc71;border:1px solid #2ecc71;padding:2px 6px;border-radius:10px;margin-left:10px;">ORIGIN</span>';
+                tlist.innerHTML += '<div class="timeline-item"><h4>' + wp.name + ' ' + badge + '</h4><div class="timeline-date">' + wp.time + '</div><p style="color:#8892b0;font-size:0.85rem;">' + (wp.status || 'Location updated') + '</p></div>';
             });
         }
 
-        // Init Map
+        // Init Map — pass currentPositionIndex so the map knows which waypoint is current
         setTimeout(() => {
-            initMap(ship.waypoints);
+            initMap(ship.waypoints, cpIdx);
         }, 500);
     }
 
-    function initMap(waypoints) {
+    function initMap(waypoints, cpIdx) {
         if (!waypoints || waypoints.length === 0) return;
         if (typeof L === 'undefined') {
-            setTimeout(() => initMap(waypoints), 300);
+            setTimeout(() => initMap(waypoints, cpIdx), 300);
             return;
         }
 
-        const center = [waypoints[waypoints.length - 1].lat, waypoints[waypoints.length - 1].lng];
+        // Use provided cpIdx or default to last waypoint for backward compatibility
+        if (cpIdx === undefined || cpIdx === null || cpIdx < 0) cpIdx = waypoints.length - 1;
+
+        // Center the map on the current position
+        const center = [waypoints[cpIdx].lat, waypoints[cpIdx].lng];
         const map = L.map('track-map').setView(center, 5);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap contributors'
@@ -331,11 +342,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
         waypoints.forEach((wp, i) => {
             const isFirst = i === 0;
-            const isLast = i === waypoints.length - 1;
+            const isCurrent = i === cpIdx;
 
             let markerClass = 'standard-marker-client';
             if (isFirst) markerClass = 'standard-marker-client origin-marker-client';
-            if (isLast && waypoints.length > 1) markerClass = 'pulse-marker-client';
+            if (isCurrent && waypoints.length > 1) markerClass = 'pulse-marker-client';
 
             const customIcon = L.divIcon({
                 className: 'custom-div-icon',
@@ -344,8 +355,14 @@ window.addEventListener('DOMContentLoaded', () => {
                 iconAnchor: [10, 10]
             });
 
+            // Build tooltip label with position type
+            let tooltipLabel = wp.name.split(',')[0];
+            if (isFirst) tooltipLabel = 'ORIGIN: ' + tooltipLabel;
+            if (isCurrent) tooltipLabel = 'CURRENT: ' + tooltipLabel;
+            if (i === waypoints.length - 1 && !isCurrent && !isFirst && waypoints.length > 2) tooltipLabel = 'DEST: ' + tooltipLabel;
+
             const m = L.marker([wp.lat, wp.lng], { icon: customIcon }).addTo(map);
-            m.bindTooltip(wp.name.split(',')[0], {
+            m.bindTooltip(tooltipLabel, {
                 permanent: false,
                 direction: 'top',
                 className: 'sophisticated-label',

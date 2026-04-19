@@ -220,7 +220,7 @@
 <div class="form-column">
 <div class="glass-panel form-panel map-panel">
 <h3><i class="fa-solid fa-map-location-dot"></i> Live Shipment Map Control</h3>
-<p class="text-sm text-muted mb-3">Click on the map to plot locations. First click is Origin, last is Current Location.</p>
+<p class="text-sm text-muted mb-3">Click on the map to plot route stops. First stop = Origin. Use "Set as Current Position" in the timeline below to mark where the package currently is.</p>
 <div class="map-search">
 <input id="mapSearchInput" placeholder="Search a city or country to zoom..." type="text"/>
 <button class="btn-primary btn-sm" id="mapSearchBtn"><i class="fa-solid fa-search"></i></button>
@@ -239,6 +239,43 @@
 </div>
 <button class="btn-primary w-full mt-4" id="saveShipmentBtn"><i class="fa-solid fa-cloud-arrow-up"></i> Save &amp; Sync Globally</button>
 </div>
+</div>
+</div>
+</section>
+<!-- Manage Records View -->
+<section class="view-section" id="view-manage-shipments" style="display: none;">
+<div class="page-header flex-between">
+<div>
+<h1>Manage Shipment Records</h1>
+<p>View, edit, and manage all shipment records in the system.</p>
+</div>
+<button class="btn-primary" id="goToCreateBtn2" onclick="document.querySelector('.nav-item[data-tab=create-shipment]').click()"><i class="fa-solid fa-plus"></i> New Shipment</button>
+</div>
+<div class="glass-panel mt-4">
+<div class="panel-header">
+<h3><i class="fa-solid fa-boxes-stacked"></i> All Shipments</h3>
+<div style="display:flex;align-items:center;gap:8px;">
+<input id="manageSearch" placeholder="Search tracking code..." type="text" style="width:200px;padding:0.5rem 1rem;font-size:0.85rem;"/>
+<button class="btn-outline btn-sm" id="refreshRecordsBtn" onclick="loadManageRecords()"><i class="fa-solid fa-rotate"></i></button>
+</div>
+</div>
+<div class="table-responsive">
+<table id="manageTable">
+<thead>
+<tr>
+<th>Tracking Code</th>
+<th>Package</th>
+<th>Receiver</th>
+<th>Current Location</th>
+<th>Status</th>
+<th>Last Updated</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody>
+<!-- JS populated -->
+</tbody>
+</table>
 </div>
 </div>
 </section>
