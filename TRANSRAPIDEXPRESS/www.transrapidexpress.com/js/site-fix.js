@@ -163,8 +163,13 @@
     
     if (!menuBtn || !drawer) return;
     
-    // Force drawer to be properly styled and visible when opened
-    drawer.style.willChange = 'transform';
+    // Force drawer to be properly hidden initially
+    // Tailwind v4 uses CSS 'translate' property, NOT 'transform'
+    drawer.style.willChange = 'translate';
+    // Ensure the drawer starts off-screen
+    if (!drawer.classList.contains('translate-x-0')) {
+      drawer.classList.add('translate-x-full');
+    }
     
     // Ensure all text inside the drawer is visible by applying explicit colors
     // This overrides any CSS variable issues
@@ -267,7 +272,10 @@
     function openMenu() {
       isOpen = true;
       newMenuBtn.setAttribute('aria-expanded', 'true');
-      drawer.style.transform = 'translateX(0)';
+      // Tailwind v4 uses CSS 'translate' property, NOT 'transform'
+      drawer.style.translate = '0 0';
+      drawer.classList.remove('translate-x-full');
+      drawer.classList.add('translate-x-0');
       if (activeBackdrop) {
         activeBackdrop.style.opacity = '1';
         activeBackdrop.style.pointerEvents = 'auto';
@@ -279,7 +287,10 @@
     function closeMenu() {
       isOpen = false;
       newMenuBtn.setAttribute('aria-expanded', 'false');
-      drawer.style.transform = 'translateX(100%)';
+      // Tailwind v4 uses CSS 'translate' property, NOT 'transform'
+      drawer.style.translate = '100% 0';
+      drawer.classList.remove('translate-x-0');
+      drawer.classList.add('translate-x-full');
       if (activeBackdrop) {
         activeBackdrop.style.opacity = '0';
         activeBackdrop.style.pointerEvents = 'none';
