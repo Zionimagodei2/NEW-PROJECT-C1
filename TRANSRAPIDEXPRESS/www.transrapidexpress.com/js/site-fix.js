@@ -56,7 +56,6 @@
         transition: opacity 0.2s, transform 0.2s;
         transform: translateX(-50%) translateY(4px);
       `;
-      // We'll calculate top/left on hover/click
       
       mobileLinks.forEach(link => {
         const a = document.createElement('a');
@@ -139,7 +138,6 @@
   
   function findMobileMenuLinks(sectionName) {
     const links = [];
-    // Find all mobile menu sections: `.fixed.top-[64px] .flex-1.flex.flex-col > .flex.flex-col`
     const mobileMenuDivs = document.querySelectorAll('.fixed.top-\\[64px\\] .flex-1.flex.flex-col > .flex.flex-col');
     
     mobileMenuDivs.forEach(container => {
@@ -148,7 +146,6 @@
       const labelText = label.textContent.trim();
       if (labelText.toLowerCase() !== sectionName.toLowerCase()) return;
       
-      // Found the matching section, get its sub-links
       const subLinks = container.querySelectorAll('.overflow-hidden a');
       subLinks.forEach(a => {
         links.push({ href: a.getAttribute('href'), text: a.textContent.trim() });
@@ -166,56 +163,156 @@
     
     if (!menuBtn || !drawer) return;
     
-    let isOpen = false;
-    
-    menuBtn.addEventListener('click', function () {
-      isOpen = !isOpen;
-      menuBtn.setAttribute('aria-expanded', isOpen);
-      
-      if (isOpen) {
-        drawer.style.transform = 'translateX(0)';
-        if (backdrop) {
-          backdrop.style.opacity = '1';
-          backdrop.style.pointerEvents = 'auto';
-        }
+    // Make sure drawer content is visible by ensuring text color is set
+    const drawerContent = drawer.querySelector('.flex-1');
+    if (drawerContent) {
+      drawerContent.style.color = 'var(--foreground, #111827)';
+    }
+
+    // Add a close button at the top of the drawer if not already present
+    let closeBtn = drawer.querySelector('.mobile-menu-close-btn');
+    if (!closeBtn) {
+      closeBtn = document.createElement('button');
+      closeBtn.className = 'mobile-menu-close-btn';
+      closeBtn.setAttribute('aria-label', 'Close navigation menu');
+      closeBtn.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>';
+      closeBtn.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: none;
+        background: transparent;
+        color: var(--foreground, #111827);
+        cursor: pointer;
+        transition: background 0.2s;
+        margin-left: auto;
+        margin-bottom: 8px;
+      `;
+      closeBtn.addEventListener('mouseenter', () => {
+        closeBtn.style.backgroundColor = 'var(--secondary, #f3f4f6)';
+      });
+      closeBtn.addEventListener('mouseleave', () => {
+        closeBtn.style.backgroundColor = 'transparent';
+      });
+
+      const scrollContainer = drawer.querySelector('.flex-1.overflow-y-auto, .flex-1.flex.flex-col.overflow-y-auto');
+      if (scrollContainer) {
+        scrollContainer.insertBefore(closeBtn, scrollContainer.firstChild);
       } else {
-        drawer.style.transform = 'translateX(100%)';
-        if (backdrop) {
-          backdrop.style.opacity = '0';
-          backdrop.style.pointerEvents = 'none';
+        const firstChild = drawer.querySelector('.flex-1');
+        if (firstChild) {
+          firstChild.insertBefore(closeBtn, firstChild.firstChild);
         }
+      }
+    }
+
+    let isOpen = false;
+
+    function openMenu() {
+      isOpen = true;
+      menuBtn.setAttribute('aria-expanded', 'true');
+      drawer.style.transform = 'translateX(0)';
+      if (backdrop) {
+        backdrop.style.opacity = '1';
+        backdrop.style.pointerEvents = 'auto';
+      }
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeMenu() {
+      isOpen = false;
+      menuBtn.setAttribute('aria-expanded', 'false');
+      drawer.style.transform = 'translateX(100%)';
+      if (backdrop) {
+        backdrop.style.opacity = '0';
+        backdrop.style.pointerEvents = 'none';
+      }
+      document.body.style.overflow = '';
+    }
+
+    menuBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (isOpen) {
+        closeMenu();
+      } else {
+        openMenu();
       }
     });
     
     if (backdrop) {
-      backdrop.addEventListener('click', function () {
-        isOpen = false;
-        menuBtn.setAttribute('aria-expanded', 'false');
-        drawer.style.transform = 'translateX(100%)';
-        backdrop.style.opacity = '0';
-        backdrop.style.pointerEvents = 'none';
-      });
+      backdrop.addEventListener('click', closeMenu);
     }
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeMenu);
+    }
+    
+    // Close menu on Escape key
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && isOpen) {
+        closeMenu();
+      }
+    });
+
+    // Close menu when clicking a link inside it
+    drawer.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', function () {
+        closeMenu();
+      });
+    });
     
     // Mobile sub-menu toggles
     const subMenuBtns = drawer.querySelectorAll('button.p-1\\.5');
     subMenuBtns.forEach(btn => {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        e.preventDefault();
         const container = btn.closest('.flex.flex-col');
-        const submenu = container.querySelector('.overflow-hidden');
+        const submenu = container ? container.querySelector('.overflow-hidden') : null;
         if (!submenu) return;
         
         const isExpanded = submenu.style.maxHeight && submenu.style.maxHeight !== '0px';
         if (isExpanded) {
           submenu.style.maxHeight = '0px';
           submenu.style.opacity = '0';
-          btn.querySelector('svg').style.transform = 'rotate(0deg)';
+          const svg = btn.querySelector('svg');
+          if (svg) svg.style.transform = 'rotate(0deg)';
         } else {
           submenu.style.maxHeight = '500px';
           submenu.style.opacity = '1';
-          btn.querySelector('svg').style.transform = 'rotate(180deg)';
+          const svg = btn.querySelector('svg');
+          if (svg) svg.style.transform = 'rotate(180deg)';
         }
       });
+    });
+
+    // Also handle sub-menu toggles that use different button class patterns
+    const altSubMenuBtns = drawer.querySelectorAll('button.hover\\:bg-secondary');
+    altSubMenuBtns.forEach(btn => {
+      // Skip if already handled by p-1.5 selector
+      if (btn.classList.contains('p-1.5')) return;
+      // Check if this is a chevron button (contains only SVG)
+      if (btn.querySelector('svg') && btn.textContent.trim() === '') {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          e.preventDefault();
+          const container = btn.closest('.flex.flex-col');
+          const submenu = container ? container.querySelector('.overflow-hidden') : null;
+          if (!submenu) return;
+          
+          const isExpanded = submenu.style.maxHeight && submenu.style.maxHeight !== '0px';
+          if (isExpanded) {
+            submenu.style.maxHeight = '0px';
+            submenu.style.opacity = '0';
+          } else {
+            submenu.style.maxHeight = '500px';
+            submenu.style.opacity = '1';
+          }
+        });
+      }
     });
   }
 
@@ -290,8 +387,6 @@
     });
   }
 
-  // Live chat code removed, Tawk.to handles everything now.
-
   // ─── 7. STICKY HEADER SCROLL EFFECT ───
   function initStickyHeader() {
     const header = document.querySelector('header.sticky');
@@ -306,8 +401,22 @@
     });
   }
 
+  // ─── 8. REMOVE ANY STALE TRACK OVERLAYS ───
+  function removeStaleOverlays() {
+    // Remove any leftover custom-track-overlay elements that might have been
+    // injected by previous versions of track-sync-v3.js
+    document.querySelectorAll('.custom-track-overlay').forEach(el => {
+      el.remove();
+    });
+    // Also remove any close buttons for the old overlay
+    document.querySelectorAll('.close-track-btn').forEach(el => {
+      el.remove();
+    });
+  }
+
   // ─── INIT ALL ───
   function initAll() {
+    removeStaleOverlays();
     initDesktopDropdowns();
     initMobileMenu();
     initThemeSwitcher();

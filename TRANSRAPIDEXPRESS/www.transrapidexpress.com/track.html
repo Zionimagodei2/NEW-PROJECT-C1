@@ -226,71 +226,71 @@
         <!-- Mobile Menu Backdrop -->
         <div class="fixed inset-0 top-[64px] z-40 bg-background/80 backdrop-blur-sm lg:hidden transition-opacity duration-300 opacity-0 pointer-events-none"></div>
         <!-- Mobile Menu Drawer -->
-        <div class="fixed top-[64px] right-0 z-50 h-[calc(100dvh-64px)] w-[85vw] max-w-[320px] border-l border-border bg-background shadow-2xl transition-transform duration-300 ease-in-out lg:hidden flex flex-col overflow-hidden translate-x-full">
-            <div class="flex-1 flex flex-col overflow-y-auto p-6">
-                <div class="flex-1 flex flex-col gap-0">
-                    <a class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl hover:bg-secondary transition-colors" href="index.html">Home</a>
-                    
-                    <div class="flex flex-col">
-                        <div class="flex items-center justify-between">
-                            <a class="flex-1 px-4 py-3 text-sm font-semibold rounded-xl hover:bg-secondary transition-colors" href="about.html">About</a>
-                            <button class="p-1.5 hover:bg-secondary rounded-lg transition-colors"><svg class="h-4 w-4 transition-transform duration-200" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6"></path></svg></button>
-                        </div>
-                        <div class="overflow-hidden transition-all duration-300 max-h-0 opacity-0">
-                            <div class="pl-4 py-1 flex flex-col gap-1">
-                                <a class="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg" href="about.html">Our Mission</a>
-                                <a class="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg" href="partnerships.html">Partnerships</a>
-                                <a class="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg" href="reviews.html">Client Reviews</a>
-                            </div>
-                        </div>
-                    </div>
+        <div class="fixed top-[64px] right-0 z-50 h-[calc(100dvh-64px)] w-[85vw] max-w-[320px] border-l border-border bg-background shadow-2xl transition-transform duration-300 ease-in-out lg:hidden flex flex-col overflow-hidden translate-x-full" style="color: var(--foreground, #111827);">
+            <div class="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-2">
+                <a class="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-foreground hover:bg-secondary" href="index.html">Home</a>
 
-                    <div class="flex flex-col">
-                        <div class="flex items-center justify-between">
-                            <a class="flex-1 px-4 py-3 text-sm font-semibold rounded-xl hover:bg-secondary transition-colors" href="services.html">Services</a>
-                            <button class="p-1.5 hover:bg-secondary rounded-lg transition-colors"><svg class="h-4 w-4 transition-transform duration-200" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6"></path></svg></button>
-                        </div>
-                        <div class="overflow-hidden transition-all duration-300 max-h-0 opacity-0">
-                            <div class="pl-4 py-1 flex flex-col gap-1">
-                                <a class="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg" href="services/international-shipping.html">International Shipping</a>
-                                <a class="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg" href="services/domestic-shipping.html">Domestic Shipping</a>
-                                <a class="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg" href="services/warehousing-distribution.html">Warehousing</a>
-                                <a class="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg" href="services/e-commerce-logistics.html">E-commerce</a>
-                            </div>
-                        </div>
+                <div class="flex flex-col">
+                    <div class="flex items-center justify-between px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 text-foreground hover:bg-secondary">
+                        <a class="flex-1 py-1" href="about.html">About</a>
+                        <button class="p-1.5 -mr-1.5 rounded-md hover:bg-secondary transition-colors"><svg class="h-4 w-4 transition-transform duration-200" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg></button>
                     </div>
-
-                    <div class="flex flex-col">
-                        <div class="flex items-center justify-between">
-                            <a class="flex-1 px-4 py-3 text-sm font-semibold rounded-xl hover:bg-secondary transition-colors" href="shipping-policy.html">Policies</a>
-                            <button class="p-1.5 hover:bg-secondary rounded-lg transition-colors"><svg class="h-4 w-4 transition-transform duration-200" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6"></path></svg></button>
-                        </div>
-                        <div class="overflow-hidden transition-all duration-300 max-h-0 opacity-0">
-                            <div class="pl-4 py-1 flex flex-col gap-1">
-                                <a class="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg" href="shipping-policy.html">Shipping Policy</a>
-                                <a class="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg" href="returns-refunds-policy.html">Returns & Refunds</a>
-                                <a class="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg" href="privacy-policy.html">Privacy Policy</a>
-                                <a class="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg" href="terms-and-conditions.html">Terms of Service</a>
-                            </div>
-                        </div>
+                    <div class="overflow-hidden transition-all duration-200 flex flex-col pl-4 border-l-2 border-border ml-6 max-h-0 opacity-0">
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="about.html">Our Company</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="global-network.html">Our Global Network</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="fleet.html">Our Fleet</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="certifications.html">Certifications</a>
                     </div>
-
-                    <div class="flex flex-col">
-                        <div class="flex items-center justify-between">
-                            <a class="flex-1 px-4 py-3 text-sm font-semibold rounded-xl hover:bg-secondary transition-colors" href="faq.html">Info</a>
-                            <button class="p-1.5 hover:bg-secondary rounded-lg transition-colors"><svg class="h-4 w-4 transition-transform duration-200" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6"></path></svg></button>
-                        </div>
-                        <div class="overflow-hidden transition-all duration-300 max-h-0 opacity-0">
-                            <div class="pl-4 py-1 flex flex-col gap-1">
-                                <a class="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg" href="faq.html">FAQs</a>
-                                <a class="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg" href="global-network.html">Global Network</a>
-                                <a class="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg" href="fleet.html">Our Fleet</a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <a class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl hover:bg-secondary transition-colors" href="contact.html">Contact</a>
                 </div>
+
+                <div class="flex flex-col">
+                    <div class="flex items-center justify-between px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 text-foreground hover:bg-secondary">
+                        <a class="flex-1 py-1" href="services.html">Services</a>
+                        <button class="p-1.5 -mr-1.5 rounded-md hover:bg-secondary transition-colors"><svg class="h-4 w-4 transition-transform duration-200" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg></button>
+                    </div>
+                    <div class="overflow-hidden transition-all duration-200 flex flex-col pl-4 border-l-2 border-border ml-6 max-h-0 opacity-0">
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="services/international-shipping.html">International Shipping</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="services/domestic-shipping.html">Domestic Shipping</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="services/cargo-freight-services.html">Cargo Freight</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="services/pet-delivery.html">Pet Delivery</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="services/e-commerce-logistics.html">E-Commerce</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="services/customs-clearance-brokerage.html">Customs Clearance</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="services/warehousing-distribution.html">Warehousing</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="services/specialized-cargo-handling.html">Specialized Cargo</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="services/supply-chain-solutions.html">Supply Chain</a>
+                    </div>
+                </div>
+
+                <div class="flex flex-col">
+                    <div class="flex items-center justify-between px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 text-foreground hover:bg-secondary">
+                        <a class="flex-1 py-1" href="shipping-policy.html">Policies</a>
+                        <button class="p-1.5 -mr-1.5 rounded-md hover:bg-secondary transition-colors"><svg class="h-4 w-4 transition-transform duration-200" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg></button>
+                    </div>
+                    <div class="overflow-hidden transition-all duration-200 flex flex-col pl-4 border-l-2 border-border ml-6 max-h-0 opacity-0">
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="shipping-policy.html">Shipping Policy</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="returns-refunds-policy.html">Returns & Refunds</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="cargo-handling-safety-policy.html">Cargo Safety</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="customs-duties-policy.html">Customs & Duties</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="insurance-policy.html">Insurance</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="payment-policy.html">Payment</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="privacy-policy.html">Privacy Policy</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="terms-and-conditions.html">Terms & Conditions</a>
+                    </div>
+                </div>
+
+                <div class="flex flex-col">
+                    <div class="flex items-center justify-between px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 text-foreground hover:bg-secondary">
+                        <a class="flex-1 py-1" href="faq.html">Info</a>
+                        <button class="p-1.5 -mr-1.5 rounded-md hover:bg-secondary transition-colors"><svg class="h-4 w-4 transition-transform duration-200" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg></button>
+                    </div>
+                    <div class="overflow-hidden transition-all duration-200 flex flex-col pl-4 border-l-2 border-border ml-6 max-h-0 opacity-0">
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="reviews.html">Reviews</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="faq.html">FAQs</a>
+                        <a class="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary font-medium" href="partnerships.html">Partnerships</a>
+                    </div>
+                </div>
+
+                <a class="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-foreground hover:bg-secondary" href="contact.html">Contact</a>
             </div>
             <div class="p-6 border-t border-border bg-secondary/30">
                 <a href="track.html">
@@ -409,45 +409,7 @@
     </footer>
 
     <script defer src="js/site-fix.js"></script>
-    <script>
-        // Prevent the old tracking overlay from auto-showing on track.html
-        window.DISABLE_TRACK_OVERLAY = true;
-    </script>
     <script defer src="js/track-sync-v3.js"></script>
-    <script>
-        // Bridge the new UI with the existing tracking logic
-        window.addEventListener('DOMContentLoaded', () => {
-            const mainSubmit = document.getElementById('main-track-submit');
-            const mainCode = document.getElementById('main-track-code');
-            const mainPin = document.getElementById('main-track-pin');
-
-            if (mainSubmit) {
-                mainSubmit.addEventListener('click', () => {
-                    const code = mainCode.value.trim();
-                    const pin = mainPin.value.trim();
-                    
-                    if (code && pin) {
-                        // Fill the overlay inputs and trigger its submit
-                        const overlayCode = document.getElementById('ts-code');
-                        const overlayPin = document.getElementById('ts-pin');
-                        const overlaySubmit = document.getElementById('ts-submit');
-                        const overlay = document.querySelector('.custom-track-overlay');
-
-                        if (overlayCode && overlayPin && overlaySubmit) {
-                            overlayCode.value = code;
-                            overlayPin.value = pin;
-                            
-                            // Show overlay and trigger search
-                            if (overlay) overlay.style.display = 'block';
-                            overlaySubmit.click();
-                        }
-                    } else {
-                        alert('Please enter both tracking code and PIN.');
-                    }
-                });
-            }
-        });
-    </script>
     <!--Start of Tawk.to Script-->
     <script type="text/javascript">
     var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();

@@ -1,154 +1,157 @@
-// track-sync.js
+// track-sync-v3.js — Tracking functionality for track.html
+// OVERLAY COMPLETELY REMOVED: No more overlay, no more click interceptors.
+// "Track Now" and "Track Shipment" buttons now navigate to track.html normally.
 
-// Mock Database Fetcher (same as Admin)
 const STORE_KEY = 'transrapid_shipments';
 function getShipments() {
     const data = localStorage.getItem(STORE_KEY);
     return data ? JSON.parse(data) : {};
 }
 
-// Inject Leaflet for the Map
-const leafletCSS = document.createElement('link');
-leafletCSS.rel = 'stylesheet';
-leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-document.head.appendChild(leafletCSS);
+// Only load Leaflet and tracking styles on the track page
+const isTrackPage = window.location.pathname.includes('track.html') || window.location.pathname.endsWith('/track');
 
-const leafletJS = document.createElement('script');
-leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-document.head.appendChild(leafletJS);
+if (isTrackPage) {
+    // Inject Leaflet for the Map
+    const leafletCSS = document.createElement('link');
+    leafletCSS.rel = 'stylesheet';
+    leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(leafletCSS);
 
-// Global Styles for Custom Track View
-const trackStyles = document.createElement('style');
-trackStyles.innerHTML = `
-    .custom-track-overlay {
-        position: fixed; top: 70px; left: 0; width: 100vw; height: calc(100vh - 70px);
-        background: #020813; z-index: 100; overflow-y: auto; color: white;
-        font-family: inherit; padding-bottom: 50px;
-        display: none; /* Hidden by default */
-    }
-    .track-hero {
-        text-align: center; padding: 4rem 1rem; background: linear-gradient(180deg, #0a1628 0%, #020813 100%);
-    }
-    .track-hero h1 { font-size: 2.5rem; margin-bottom: 1rem; font-weight: bold; }
-    .track-hero p { color: #8892b0; margin-bottom: 2rem; max-width: 500px; margin-inline: auto; }
-    .search-box {
-        max-width: 450px; margin: 0 auto; background: rgba(255,255,255,0.05);
-        padding: 2rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);
-        text-align: left;
-    }
-    .search-box input {
-        width: 100%; padding: 1rem; margin-bottom: 1rem; border-radius: 8px;
-        background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white;
-    }
-    .search-btn {
-        width: 100%; padding: 1rem; border-radius: 8px; background: #FF9F1C;
-        color: white; font-weight: bold; font-size: 1.1rem; border: none; cursor: pointer;
-    }
-    .error-msg { color: #ff4757; margin-top: 1rem; text-align: center; display: none; }
-    
-    /* Result View */
-    .result-view { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; display: none; }
-    .result-header { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
-    .status-card {
-        background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px;
-        display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,159,28,0.3);
-    }
-    .status-badge { color: #FF9F1C; font-weight: bold; font-size: 1.25rem; }
-    
-    .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
-    .info-group { margin-bottom: 1rem; }
-    .info-label { color: #8892b0; font-size: 0.85rem; display: block; margin-bottom: 0.2rem; }
-    .info-val { font-weight: 500; }
-    
-    .map-container { height: 400px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin-top: 2rem; }
-    
-    .timeline { margin-top: 2rem; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 1.5rem; }
-    .timeline-item { position: relative; margin-bottom: 2rem; }
-    .timeline-item::before { content: ''; position: absolute; left: -1.8rem; top: 0; width: 12px; height: 12px; border-radius: 50%; background: #FF9F1C; }
-    .timeline-item h4 { color: #FF9F1C; margin-bottom: 0.2rem; }
-    .timeline-date { font-size: 0.8rem; color: #8892b0; margin-bottom: 0.5rem; }
-    
-    /* Map Marker Animations */
-    .pulse-marker-client {
-        background: #e74c3c; border-radius: 50%; width: 20px; height: 20px;
-        border: 3px solid white; box-shadow: 0 0 10px rgba(231, 76, 60, 0.8);
-        position: relative; transform: translate(-50%, -50%);
-    }
-    .pulse-marker-client::before {
-        content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px;
-        border: 2px solid #e74c3c; border-radius: 50%;
-        animation: beckon 1.5s infinite ease-out;
-    }
-    @keyframes beckon { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
-    
-    .standard-marker-client {
-        background: #3498db; border-radius: 50%; width: 14px; height: 14px;
-        border: 2px solid white; transform: translate(-50%, -50%);
-    }
-    .origin-marker-client { background: #2ecc71; border-color: white; }
+    const leafletJS = document.createElement('script');
+    leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    document.head.appendChild(leafletJS);
 
-    .sophisticated-label {
-        background: rgba(10, 22, 40, 0.85);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 159, 28, 0.5);
-        color: #fff;
-        font-size: 0.8rem;
-        font-weight: 600;
-        font-family: inherit;
-        padding: 4px 10px;
-        border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-    }
-    .sophisticated-label::before { display: none; }
+    // Tracking result styles
+    const trackStyles = document.createElement('style');
+    trackStyles.innerHTML = `
+        .track-result-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            color: white;
+            display: none;
+        }
+        .track-result-container.active {
+            display: block;
+        }
+        .result-header {
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .status-card {
+            background: rgba(255,255,255,0.05);
+            padding: 1.5rem;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(255,159,28,0.3);
+        }
+        .status-badge { color: #FF9F1C; font-weight: bold; font-size: 1.25rem; }
+        .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
+        .info-group { margin-bottom: 1rem; }
+        .info-label { color: #8892b0; font-size: 0.85rem; display: block; margin-bottom: 0.2rem; }
+        .info-val { font-weight: 500; }
+        .map-container { height: 400px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin-top: 2rem; }
+        .timeline { margin-top: 2rem; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 1.5rem; }
+        .timeline-item { position: relative; margin-bottom: 2rem; }
+        .timeline-item::before { content: ''; position: absolute; left: -1.8rem; top: 0; width: 12px; height: 12px; border-radius: 50%; background: #FF9F1C; }
+        .timeline-item h4 { color: #FF9F1C; margin-bottom: 0.2rem; }
+        .timeline-date { font-size: 0.8rem; color: #8892b0; margin-bottom: 0.5rem; }
 
-    /* == Responsive Adjustments == */
-    @media (max-width: 768px) {
-        .track-hero h1 { font-size: 1.8rem; }
-        .details-grid { grid-template-columns: 1fr; gap: 1rem; }
-        .status-card { flex-direction: column; text-align: center; gap: 1rem; }
-        .status-card div { text-align: center !important; }
-        .map-container { height: 300px; }
-    }
-    @media (max-width: 480px) {
-        .search-box { padding: 1.5rem; }
-        .track-hero { padding: 2rem 1rem; }
-    }
-    .close-track-btn {
-        position: fixed; top: 15px; right: 20px; z-index: 101;
-        background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-        color: white; padding: 6px 12px; border-radius: 8px; cursor: pointer;
-        font-weight: bold; backdrop-filter: blur(5px);
-        transition: all 0.2s;
-    }
-    .close-track-btn:hover { background: rgba(255,255,255,0.2); }
-`;
-document.head.appendChild(trackStyles);
+        .pulse-marker-client {
+            background: #e74c3c; border-radius: 50%; width: 20px; height: 20px;
+            border: 3px solid white; box-shadow: 0 0 10px rgba(231, 76, 60, 0.8);
+            position: relative; transform: translate(-50%, -50%);
+        }
+        .pulse-marker-client::before {
+            content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px;
+            border: 2px solid #e74c3c; border-radius: 50%;
+            animation: beckon 1.5s infinite ease-out;
+        }
+        @keyframes beckon { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
 
-// Overlay UI HTML
-const overlay = document.createElement('div');
-overlay.className = 'custom-track-overlay';
-overlay.style.display = 'none'; // Explicitly hide on creation
-overlay.innerHTML = `
-    <button class="close-track-btn" id="ts-close">Close ×</button>
-    <!-- Search View -->
-    <div id="ts-search-view" class="track-hero">
-        <h1 style="color: #ffffff;">Track Your Shipment</h1>
-        <p>Enter your tracking code and PIN to view real-time location and status updates for your shipment.</p>
-        <div class="search-box">
-            <input type="text" id="ts-code" placeholder="Tracking Code (e.g. TR-XXX)">
-            <input type="password" id="ts-pin" placeholder="Secret PIN">
-            <button class="search-btn" id="ts-submit">Track Shipment</button>
-            <p class="error-msg" id="ts-error">Invalid tracking code or PIN.</p>
-        </div>
-    </div>
+        .standard-marker-client {
+            background: #3498db; border-radius: 50%; width: 14px; height: 14px;
+            border: 2px solid white; transform: translate(-50%, -50%);
+        }
+        .origin-marker-client { background: #2ecc71; border-color: white; }
 
-    <!-- Result View -->
-    <div id="ts-result-view" class="result-view">
+        .sophisticated-label {
+            background: rgba(10, 22, 40, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 159, 28, 0.5);
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 600;
+            font-family: inherit;
+            padding: 4px 10px;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+        .sophisticated-label::before { display: none; }
+
+        .track-error-msg {
+            color: #ff4757;
+            margin-top: 1rem;
+            text-align: center;
+            display: none;
+            font-size: 0.9rem;
+        }
+
+        .track-back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 1.5rem;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+        .track-back-btn:hover { background: rgba(255,255,255,0.2); }
+
+        @media (max-width: 768px) {
+            .details-grid { grid-template-columns: 1fr; gap: 1rem; }
+            .status-card { flex-direction: column; text-align: center; gap: 1rem; }
+            .status-card div { text-align: center !important; }
+            .map-container { height: 300px; }
+        }
+    `;
+    document.head.appendChild(trackStyles);
+}
+
+// Initialize tracking on track.html only
+window.addEventListener('DOMContentLoaded', () => {
+    if (!isTrackPage) return;
+
+    const mainSubmit = document.getElementById('main-track-submit');
+    const mainCode = document.getElementById('main-track-code');
+    const mainPin = document.getElementById('main-track-pin');
+    const trackFormArea = document.querySelector('.track-card');
+
+    if (!mainSubmit || !mainCode || !mainPin) return;
+
+    // Create result container and insert after the form
+    const resultContainer = document.createElement('div');
+    resultContainer.className = 'track-result-container';
+    resultContainer.id = 'track-result-container';
+    resultContainer.innerHTML = `
+        <button class="track-back-btn" id="track-back-btn">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+            Track Another Shipment
+        </button>
         <div class="result-header">
-            <h2 style="color: #ffffff;">SHIPMENT DETAILS</h2>
-            <p>Tracking Code: <strong style="color: #FF9F1C;" id="res-code">--</strong></p>
+            <h2 style="color: #ffffff; font-size: 1.5rem; font-weight: bold;">SHIPMENT DETAILS</h2>
+            <p style="color: #94a3b8;">Tracking Code: <strong style="color: #FF9F1C;" id="res-code">--</strong></p>
         </div>
-        
         <div class="status-card">
             <div>
                 <span class="info-label">CURRENT STATUS</span>
@@ -159,7 +162,6 @@ overlay.innerHTML = `
                 <div class="info-val" id="res-date">--</div>
             </div>
         </div>
-
         <h3 style="margin: 2rem 0 1rem; color: #ffffff;">PRODUCT INFORMATION</h3>
         <div class="details-grid">
             <div>
@@ -174,138 +176,137 @@ overlay.innerHTML = `
                 <div class="info-group"><span class="info-label">Receiver</span><span class="info-val" id="res-receiver">--</span></div>
             </div>
         </div>
-
         <h3 style="margin: 2rem 0 1rem; color: #ffffff;">LIVE SHIPMENT MAP</h3>
         <p style="color: #8892b0; font-size: 0.9rem;" id="res-current-loc">Current Location: --</p>
         <div id="track-map" class="map-container"></div>
-
         <h3 style="margin: 2rem 0 1rem; color: #ffffff;">SHIPMENT TIMELINE</h3>
-        <div class="timeline" id="res-timeline">
-            <!-- JS populated -->
-        </div>
-    </div>
-`;
+        <div class="timeline" id="res-timeline"></div>
+    `;
 
-// Wait for DOM to finish then inject logic
-window.addEventListener('DOMContentLoaded', () => {
-    // Check if we should skip the overlay entirely (on track.html)
-    const path = window.location.pathname;
-    const isTrackPage = path.includes('track.html') || path.endsWith('/track');
-    
-    // Only append overlay if NOT on track.html
-    if (!isTrackPage) {
-        document.body.appendChild(overlay);
+    // Insert result container after the tracking form
+    if (trackFormArea) {
+        trackFormArea.parentNode.insertBefore(resultContainer, trackFormArea.nextSibling);
+    } else {
+        document.querySelector('.track-page-container').appendChild(resultContainer);
     }
 
-    // Global toggle logic for "Track Now" buttons
-    document.querySelectorAll('a[href*="track.html"], button, a').forEach(el => {
-        const text = el.textContent || '';
-        if (text.includes('Track Now') || text.includes('Track Shipment')) {
-            el.addEventListener('click', (e) => {
-                e.preventDefault();
-                overlay.style.display = 'block';
-                document.body.style.overflow = 'hidden'; // Lock scroll
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                if (window.history.pushState) {
-                    window.history.pushState(null, null, 'track.html');
-                }
-            });
+    // Error message element
+    let errorMsg = document.getElementById('track-error-msg');
+    if (!errorMsg) {
+        errorMsg = document.createElement('p');
+        errorMsg.className = 'track-error-msg';
+        errorMsg.id = 'track-error-msg';
+        if (trackFormArea) {
+            trackFormArea.appendChild(errorMsg);
         }
-    });
+    }
 
-    const closeBtn = document.getElementById('ts-close');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            overlay.style.display = 'none';
-            document.body.style.overflow = ''; // Unlock scroll
-            // Optional: return to previous URL if we changed it
-            if (window.history.back && window.location.pathname.includes('track.html')) {
-                // window.history.back(); // This might be too aggressive
-            }
+    // Back button - show form, hide results
+    const backBtn = document.getElementById('track-back-btn');
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            resultContainer.classList.remove('active');
+            if (trackFormArea) trackFormArea.style.display = 'block';
+            document.querySelector('.credentials-info').style.display = 'block';
+            // Reset form
+            mainCode.value = '';
+            mainPin.value = '';
+            errorMsg.style.display = 'none';
+            // Remove map
+            const mapEl = document.getElementById('track-map');
+            if (mapEl) mapEl.innerHTML = '';
         });
     }
 
-    const btn = document.getElementById('ts-submit');
-    btn.addEventListener('click', async () => {
-        const code = document.getElementById('ts-code').value.trim();
-        const pin = document.getElementById('ts-pin').value.trim();
-        if (!code || !pin) return;
+    // Form submit handler
+    mainSubmit.addEventListener('click', async () => {
+        const code = mainCode.value.trim();
+        const pin = mainPin.value.trim();
 
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Locating...';
+        if (!code || !pin) {
+            errorMsg.textContent = 'Please enter both tracking code and PIN.';
+            errorMsg.style.display = 'block';
+            return;
+        }
+
+        mainSubmit.disabled = true;
+        mainSubmit.innerHTML = 'Locating... <svg class="w-4 h-4 animate-spin inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>';
 
         try {
-            // Import supabase from config
-            const { supabase } = await import('./supabase-config.js');
             let shipment = null;
 
-            if (supabase) {
-                const { data, error } = await supabase
-                    .from('shipments')
-                    .select('data')
-                    .eq('tracking_code', code)
-                    .single();
-                
-                if (data) {
-                    shipment = data.data;
+            try {
+                const { supabase } = await import('./supabase-config.js');
+                if (supabase) {
+                    const { data, error } = await supabase
+                        .from('shipments')
+                        .select('data')
+                        .eq('tracking_code', code)
+                        .single();
+
+                    if (data) {
+                        shipment = data.data;
+                    }
                 }
-            } else {
-                // Fallback local memory
+            } catch (supabaseErr) {
+                console.warn('Supabase unavailable, falling back to localStorage:', supabaseErr);
+            }
+
+            if (!shipment) {
                 const db = getShipments();
                 shipment = db[code];
             }
 
             if (shipment && shipment.pin === pin) {
-                document.getElementById('ts-error').style.display = 'none';
+                errorMsg.style.display = 'none';
                 renderShipment(code, shipment);
             } else {
-                document.getElementById('ts-error').style.display = 'block';
-                document.getElementById('ts-error').textContent = "Invalid Tracking Code or PIN.";
+                errorMsg.textContent = 'Invalid Tracking Code or PIN. Please check your credentials and try again.';
+                errorMsg.style.display = 'block';
             }
         } catch (err) {
-            console.error("Supabase error:", err);
-            document.getElementById('ts-error').style.display = 'block';
-            document.getElementById('ts-error').textContent = "Connection error. Please try again.";
+            console.error('Tracking error:', err);
+            errorMsg.textContent = 'Connection error. Please try again.';
+            errorMsg.style.display = 'block';
         } finally {
-            btn.disabled = false;
-            btn.innerHTML = 'Track Shipment';
+            mainSubmit.disabled = false;
+            mainSubmit.innerHTML = 'Track Shipment <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>';
         }
     });
 
     function renderShipment(code, ship) {
-        document.getElementById('ts-search-view').style.display = 'none';
-        document.getElementById('ts-result-view').style.display = 'block';
+        // Hide form, show results
+        if (trackFormArea) trackFormArea.style.display = 'none';
+        document.querySelector('.credentials-info').style.display = 'none';
+        resultContainer.classList.add('active');
 
         document.getElementById('res-code').textContent = code;
         document.getElementById('res-status').textContent = ship.pkgStatus || 'Pending';
         document.getElementById('res-date').textContent = ship.pkgEstDelivery || 'Unknown';
-        
+
         document.getElementById('res-name').textContent = ship.pkgName || 'Unknown';
         document.getElementById('res-weight').textContent = ship.pkgWeight || 'N/A';
         document.getElementById('res-desc').textContent = ship.pkgDesc || 'Unavailable';
         document.getElementById('res-value').textContent = ship.pkgValue || 'N/A';
         document.getElementById('res-transport').textContent = ship.pkgTransport || 'LAND';
-        
+
         document.getElementById('res-sender').textContent = ship.senderName || 'N/A';
         document.getElementById('res-receiver').textContent = ship.receiverName || 'N/A';
 
-        const lastLoc = ship.waypoints.length > 0 ? ship.waypoints[ship.waypoints.length-1].name : 'Unknown';
-        document.getElementById('res-current-loc').textContent = `Current Location: ${lastLoc}`;
+        const lastLoc = ship.waypoints && ship.waypoints.length > 0 ? ship.waypoints[ship.waypoints.length - 1].name : 'Unknown';
+        document.getElementById('res-current-loc').textContent = 'Current Location: ' + lastLoc;
 
         // Populate Timeline
         const tlist = document.getElementById('res-timeline');
         tlist.innerHTML = '';
-        const wps = [...ship.waypoints].reverse(); // newest first
-        wps.forEach((wp, index) => {
-            const isLatest = index === 0;
-            tlist.innerHTML += `
-                <div class="timeline-item">
-                    <h4>${wp.name} ${isLatest ? '<span style="font-size:0.7em;color:#2ecc71;border:1px solid #2ecc71;padding:2px 6px;border-radius:10px;margin-left:10px;">CURRENT</span>' : ''}</h4>
-                    <div class="timeline-date">${wp.time}</div>
-                    <p style="color:#8892b0;font-size:0.85rem;">${wp.status || 'Location updated'}</p>
-                </div>
-            `;
-        });
+        if (ship.waypoints) {
+            const wps = [...ship.waypoints].reverse();
+            wps.forEach((wp, index) => {
+                const isLatest = index === 0;
+                const currentBadge = isLatest ? '<span style="font-size:0.7em;color:#2ecc71;border:1px solid #2ecc71;padding:2px 6px;border-radius:10px;margin-left:10px;">CURRENT</span>' : '';
+                tlist.innerHTML += '<div class="timeline-item"><h4>' + wp.name + ' ' + currentBadge + '</h4><div class="timeline-date">' + wp.time + '</div><p style="color:#8892b0;font-size:0.85rem;">' + (wp.status || 'Location updated') + '</p></div>';
+            });
+        }
 
         // Init Map
         setTimeout(() => {
@@ -315,10 +316,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function initMap(waypoints) {
         if (!waypoints || waypoints.length === 0) return;
-        
-        let center = [waypoints[waypoints.length-1].lat, waypoints[waypoints.length-1].lng];
-        
-        const map = L.map('track-map').setView(center, 5); 
+        if (typeof L === 'undefined') {
+            setTimeout(() => initMap(waypoints), 300);
+            return;
+        }
+
+        const center = [waypoints[waypoints.length - 1].lat, waypoints[waypoints.length - 1].lng];
+        const map = L.map('track-map').setView(center, 5);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
@@ -327,15 +331,15 @@ window.addEventListener('DOMContentLoaded', () => {
 
         waypoints.forEach((wp, i) => {
             const isFirst = i === 0;
-            const isLast = i === waypoints.length-1;
-            
+            const isLast = i === waypoints.length - 1;
+
             let markerClass = 'standard-marker-client';
             if (isFirst) markerClass = 'standard-marker-client origin-marker-client';
             if (isLast && waypoints.length > 1) markerClass = 'pulse-marker-client';
 
             const customIcon = L.divIcon({
                 className: 'custom-div-icon',
-                html: `<div class="${markerClass}"></div>`,
+                html: '<div class="' + markerClass + '"></div>',
                 iconSize: [20, 20],
                 iconAnchor: [10, 10]
             });
@@ -350,7 +354,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
 
         if (latlngs.length > 1) {
-            L.polyline(latlngs, {color: '#FF9F1C', weight: 4, dashArray: '5, 10'}).addTo(map);
+            L.polyline(latlngs, { color: '#FF9F1C', weight: 4, dashArray: '5, 10' }).addTo(map);
         }
     }
 });
