@@ -188,13 +188,13 @@ overlay.innerHTML = `
 
 // Wait for DOM to finish then inject logic
 window.addEventListener('DOMContentLoaded', () => {
-    // Append our overlay right to the body 
-    document.body.appendChild(overlay);
-
-    // Auto-show logic (unless disabled)
+    // Check if we should skip the overlay entirely (on track.html)
     const path = window.location.pathname;
-    if (!window.DISABLE_TRACK_OVERLAY && (path.includes('track.html') || path.endsWith('/track'))) {
-        overlay.style.display = 'block';
+    const isTrackPage = path.includes('track.html') || path.endsWith('/track');
+    
+    // Only append overlay if NOT on track.html
+    if (!isTrackPage) {
+        document.body.appendChild(overlay);
     }
 
     // Global toggle logic for "Track Now" buttons
