@@ -166,14 +166,45 @@ window.addEventListener('DOMContentLoaded', () => {
         <div class="details-grid">
             <div>
                 <div class="info-group"><span class="info-label">Name</span><span class="info-val" id="res-name">--</span></div>
+                <div class="info-group"><span class="info-label">Barcode</span><span class="info-val" id="res-barcode">--</span></div>
                 <div class="info-group"><span class="info-label">Weight</span><span class="info-val" id="res-weight">--</span></div>
                 <div class="info-group"><span class="info-label">Description</span><span class="info-val" id="res-desc">--</span></div>
-                <div class="info-group"><span class="info-label">Declared Value</span><span class="info-val" id="res-value">--</span></div>
+                <div class="info-group"><span class="info-label">Estimated Delivery</span><span class="info-val" id="res-estdelivery">--</span></div>
             </div>
             <div>
+                <div class="info-group"><span class="info-label">Declared Value</span><span class="info-val" id="res-value">--</span></div>
+                <div class="info-group"><span class="info-label">Circumstance</span><span class="info-val" id="res-circumstance">--</span></div>
                 <div class="info-group"><span class="info-label">Transportation</span><span class="info-val" id="res-transport">--</span></div>
-                <div class="info-group"><span class="info-label">Sender</span><span class="info-val" id="res-sender">--</span></div>
-                <div class="info-group"><span class="info-label">Receiver</span><span class="info-val" id="res-receiver">--</span></div>
+                <div class="info-group"><span class="info-label">Agency</span><span class="info-val" id="res-agency">--</span></div>
+            </div>
+        </div>
+        <h3 style="margin: 2rem 0 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">RECEIVER <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></h3>
+        <div class="details-grid">
+            <div>
+                <div class="info-group"><span class="info-label">Name</span><span class="info-val" id="res-receiver-name">--</span></div>
+                <div class="info-group"><span class="info-label">Phone</span><span class="info-val" id="res-receiver-phone">--</span></div>
+            </div>
+            <div>
+                <div class="info-group"><span class="info-label">Email</span><span class="info-val" id="res-receiver-email">--</span></div>
+            </div>
+        </div>
+        <h3 style="margin: 2rem 0 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">SENDER <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></h3>
+        <div class="details-grid">
+            <div>
+                <div class="info-group"><span class="info-label">Name</span><span class="info-val" id="res-sender-name">--</span></div>
+                <div class="info-group"><span class="info-label">Email</span><span class="info-val" id="res-sender-email">--</span></div>
+            </div>
+            <div>
+                <div class="info-group"><span class="info-label">Phone</span><span class="info-val" id="res-sender-phone">--</span></div>
+            </div>
+        </div>
+        <h3 style="margin: 2rem 0 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">KEY DATES <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></h3>
+        <div class="details-grid">
+            <div>
+                <div class="info-group"><span class="info-label">Shipped On</span><span class="info-val" id="res-shipped-on">--</span></div>
+            </div>
+            <div>
+                <div class="info-group"><span class="info-label">Last Updated</span><span class="info-val" id="res-last-updated">--</span></div>
             </div>
         </div>
         <h3 style="margin: 2rem 0 1rem; color: #ffffff;">LIVE SHIPMENT MAP</h3>
@@ -284,14 +315,30 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('res-status').textContent = ship.pkgStatus || 'Pending';
         document.getElementById('res-date').textContent = ship.pkgEstDelivery || 'Unknown';
 
+        // Product Information
         document.getElementById('res-name').textContent = ship.pkgName || 'Unknown';
+        document.getElementById('res-barcode').textContent = ship.pkgBarcode || 'N/A';
         document.getElementById('res-weight').textContent = ship.pkgWeight || 'N/A';
         document.getElementById('res-desc').textContent = ship.pkgDesc || 'Unavailable';
+        document.getElementById('res-estdelivery').textContent = ship.pkgEstDelivery || 'N/A';
         document.getElementById('res-value').textContent = ship.pkgValue || 'N/A';
+        document.getElementById('res-circumstance').textContent = ship.pkgCircumstance || 'N/A';
         document.getElementById('res-transport').textContent = ship.pkgTransport || 'LAND';
+        document.getElementById('res-agency').textContent = ship.pkgAgency || 'Transrapid Express .inc';
 
-        document.getElementById('res-sender').textContent = ship.senderName || 'N/A';
-        document.getElementById('res-receiver').textContent = ship.receiverName || 'N/A';
+        // Receiver Information
+        document.getElementById('res-receiver-name').textContent = ship.receiverName || 'N/A';
+        document.getElementById('res-receiver-phone').textContent = ship.receiverPhone || 'N/A';
+        document.getElementById('res-receiver-email').textContent = ship.receiverEmail || 'N/A';
+
+        // Sender Information
+        document.getElementById('res-sender-name').textContent = ship.senderName || 'N/A';
+        document.getElementById('res-sender-email').textContent = ship.senderEmail || 'N/A';
+        document.getElementById('res-sender-phone').textContent = ship.senderPhone || 'N/A';
+
+        // Key Dates
+        document.getElementById('res-shipped-on').textContent = (ship.waypoints && ship.waypoints[0]) ? ship.waypoints[0].time : 'N/A';
+        document.getElementById('res-last-updated').textContent = ship.lastUpdated ? new Date(ship.lastUpdated).toLocaleString() : 'N/A';
 
         // Use currentPositionIndex to determine the current location
         const cpIdx = ship.currentPositionIndex !== undefined ? ship.currentPositionIndex : (ship.waypoints ? ship.waypoints.length - 1 : -1);

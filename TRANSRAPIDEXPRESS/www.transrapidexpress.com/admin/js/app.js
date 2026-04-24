@@ -236,16 +236,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const shipmentData = {
                 pkgName: document.getElementById('pkgName').value,
+                pkgBarcode: document.getElementById('pkgBarcode').value,
                 pkgWeight: document.getElementById('pkgWeight').value,
                 pkgValue: document.getElementById('pkgValue').value,
                 pkgDesc: document.getElementById('pkgDesc').value,
+                pkgCircumstance: document.getElementById('pkgCircumstance').value,
                 pkgTransport: document.getElementById('pkgTransport').value,
+                pkgAgency: document.getElementById('pkgAgency').value,
                 pkgStatus: document.getElementById('pkgStatus').value,
                 pkgEstDelivery: document.getElementById('pkgEstDelivery').value,
                 senderName: document.getElementById('senderName').value,
                 senderEmail: document.getElementById('senderEmail').value,
+                senderPhone: document.getElementById('senderPhone').value,
                 receiverName: document.getElementById('receiverName').value,
                 receiverEmail: document.getElementById('receiverEmail').value,
+                receiverPhone: document.getElementById('receiverPhone').value,
                 pin: currentPin,
                 waypoints: waypointsData,
                 currentPositionIndex: currentPositionIndex,
@@ -605,16 +610,21 @@ window.editShipment = async function(trackingCode) {
 
         // Fill in form fields
         document.getElementById('pkgName').value = shipment.pkgName || '';
+        document.getElementById('pkgBarcode').value = shipment.pkgBarcode || '';
         document.getElementById('pkgWeight').value = shipment.pkgWeight || '';
         document.getElementById('pkgValue').value = shipment.pkgValue || '';
         document.getElementById('pkgDesc').value = shipment.pkgDesc || '';
+        document.getElementById('pkgCircumstance').value = shipment.pkgCircumstance || '';
         document.getElementById('pkgTransport').value = shipment.pkgTransport || 'LAND';
+        document.getElementById('pkgAgency').value = shipment.pkgAgency || '';
         document.getElementById('pkgStatus').value = shipment.pkgStatus || 'Pending';
         document.getElementById('pkgEstDelivery').value = shipment.pkgEstDelivery || '';
         document.getElementById('senderName').value = shipment.senderName || '';
         document.getElementById('senderEmail').value = shipment.senderEmail || '';
+        document.getElementById('senderPhone').value = shipment.senderPhone || '';
         document.getElementById('receiverName').value = shipment.receiverName || '';
         document.getElementById('receiverEmail').value = shipment.receiverEmail || '';
+        document.getElementById('receiverPhone').value = shipment.receiverPhone || '';
 
         // Restore waypoints
         waypointsData = shipment.waypoints ? [...shipment.waypoints] : [];

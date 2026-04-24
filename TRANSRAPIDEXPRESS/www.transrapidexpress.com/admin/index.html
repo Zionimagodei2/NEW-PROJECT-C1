@@ -152,21 +152,35 @@
 <h3><i class="fa-solid fa-cube"></i> Product Information</h3>
 <div class="input-group">
 <label>Package Name / Item</label>
-<input id="pkgName" placeholder="e.g. 2022 Dodge RAM Engine" type="text"/>
+<input id="pkgName" placeholder="e.g. Cargador Dodge 2022 R/T plus sedan 4D" type="text"/>
 </div>
 <div class="input-row">
 <div class="input-group">
-<label>Weight</label>
-<input id="pkgWeight" placeholder="e.g. 150 kg" type="text"/>
+<label>Barcode Number</label>
+<input id="pkgBarcode" placeholder="e.g. WXS-197-DTP" type="text"/>
 </div>
 <div class="input-group">
-<label>Declared Value</label>
-<input id="pkgValue" placeholder="$5,000" type="text"/>
+<label>Weight</label>
+<input id="pkgWeight" placeholder="e.g. 150 kg" type="text"/>
 </div>
 </div>
 <div class="input-group">
 <label>Description (Status Note)</label>
 <input id="pkgDesc" placeholder="Currently on hold, inspecting..." type="text"/>
+</div>
+<div class="input-row">
+<div class="input-group">
+<label>Estimated Delivery Date</label>
+<input id="pkgEstDelivery" placeholder="March 15, 2026" type="text"/>
+</div>
+<div class="input-group">
+<label>Declared Value</label>
+<input id="pkgValue" placeholder="$3,000" type="text"/>
+</div>
+</div>
+<div class="input-group">
+<label>Circumstance</label>
+<input id="pkgCircumstance" placeholder="e.g. Vehicle has been inspected and cleared for transport" type="text"/>
 </div>
 <div class="input-row">
 <div class="input-group">
@@ -178,6 +192,11 @@
 </select>
 </div>
 <div class="input-group">
+<label>Agency</label>
+<input id="pkgAgency" placeholder="Transrapid Express .inc" type="text"/>
+</div>
+</div>
+<div class="input-group">
 <label>Current Status</label>
 <select id="pkgStatus">
 <option value="Pending">Pending</option>
@@ -187,31 +206,37 @@
 </select>
 </div>
 </div>
+<div class="glass-panel form-panel mt-4">
+<h3><i class="fa-solid fa-user"></i> RECEIVER</h3>
 <div class="input-group">
-<label>Estimated Delivery Date</label>
-<input id="pkgEstDelivery" placeholder="March 15, 2026" type="text"/>
+<label>Receiver Name</label>
+<input id="receiverName" placeholder="e.g. Jack Manuel Cantoran Iglesias" type="text"/>
+</div>
+<div class="input-row">
+<div class="input-group">
+<label>Receiver Phone</label>
+<input id="receiverPhone" placeholder="e.g. 248-805-6219" type="tel"/>
+</div>
+<div class="input-group">
+<label>Receiver Email</label>
+<input id="receiverEmail" placeholder="e.g. j.m.c.l5218@gmail.com" type="email"/>
+</div>
 </div>
 </div>
 <div class="glass-panel form-panel mt-4">
-<h3><i class="fa-solid fa-users"></i> Contact Data</h3>
-<div class="input-row">
+<h3><i class="fa-solid fa-phone"></i> SENDER</h3>
 <div class="input-group">
 <label>Sender Name</label>
-<input id="senderName" type="text"/>
-</div>
-<div class="input-group">
-<label>Receiver Name</label>
-<input id="receiverName" type="text"/>
-</div>
+<input id="senderName" placeholder="e.g. Lawson Jonny" type="text"/>
 </div>
 <div class="input-row">
 <div class="input-group">
 <label>Sender Email</label>
-<input id="senderEmail" type="email"/>
+<input id="senderEmail" placeholder="e.g. lawson242@amail.com" type="email"/>
 </div>
 <div class="input-group">
-<label>Receiver Email</label>
-<input id="receiverEmail" type="email"/>
+<label>Sender Phone</label>
+<input id="senderPhone" placeholder="e.g. +1 (213) 665-3982" type="tel"/>
 </div>
 </div>
 </div>
