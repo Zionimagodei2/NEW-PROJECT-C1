@@ -333,12 +333,19 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // Center the map on the current position
         const center = [waypoints[cpIdx].lat, waypoints[cpIdx].lng];
-        const map = L.map('track-map').setView(center, 5);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
+        const map = L.map('track-map').setView(center, 6);
+        // Use CARTO Voyager for detailed, clean mapping
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+            maxZoom: 19
         }).addTo(map);
 
         const latlngs = waypoints.map(wp => [wp.lat, wp.lng]);
+
+        // Fit bounds to show all waypoints
+        if (latlngs.length > 1) {
+            map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 14 });
+        }
 
         waypoints.forEach((wp, i) => {
             const isFirst = i === 0;

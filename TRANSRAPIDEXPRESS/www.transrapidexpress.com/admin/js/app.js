@@ -13,6 +13,35 @@ let previewMarker = null;
 const markers = [];
 let currentPositionIndex = -1; // -1 means not set; will default to last waypoint
 
+// --- Geocoding Helpers ---
+// Build a readable short location name from Nominatim address object
+function buildLocationName(addr, displayName) {
+    if (!addr) return displayName || 'Unknown Location';
+    const parts = [];
+    if (addr.house_number && addr.road) parts.push(addr.house_number + ' ' + addr.road);
+    else if (addr.road) parts.push(addr.road);
+    else if (addr.suburb) parts.push(addr.suburb);
+    else if (addr.neighbourhood) parts.push(addr.neighbourhood);
+    const city = addr.city || addr.town || addr.village || addr.hamlet || addr.municipality;
+    if (city) parts.push(city);
+    if (addr.state) parts.push(addr.state);
+    if (addr.country_code !== 'us' && addr.country) parts.push(addr.country);
+    if (addr.postcode) parts.push(addr.postcode);
+    return parts.length > 0 ? parts.join(', ') : (displayName || 'Unknown Location');
+}
+
+// Determine appropriate zoom level from Nominatim result type
+function getZoomForType(type) {
+    const zoomMap = {
+        'house': 18, 'building': 18, 'residential': 17, 'apartment': 18,
+        'street': 17, 'street_address': 18, 'address': 18,
+        'suburb': 14, 'neighbourhood': 15, 'quarter': 15,
+        'city': 12, 'town': 12, 'village': 13, 'hamlet': 14,
+        'county': 10, 'state': 7, 'country': 5
+    };
+    return zoomMap[type] || 14;
+}
+
 // --- Security Helpers ---
 async function hashString(str) {
     const encoder = new TextEncoder();
@@ -261,24 +290,54 @@ function setupMap() {
     const mapContainer = document.getElementById('adminMap');
     if (!mapContainer) return;
 
-    map = L.map('adminMap').setView([39.8283, -98.5795], 3);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
+    map = L.map('adminMap').setView([39.8283, -98.5795], 4);
+    // Use CARTO Voyager tiles for detailed, clean street-level mapping
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+        maxZoom: 19
     }).addTo(map);
 
     // Map Search
     const searchBtn = document.getElementById('mapSearchBtn');
     const searchInput = document.getElementById('mapSearchInput');
     if (searchBtn && searchInput) {
+        // Allow Enter key to search
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); searchBtn.click(); }
+        });
+
         searchBtn.addEventListener('click', async (e) => {
             e.preventDefault();
-            const query = searchInput.value;
+            const query = searchInput.value.trim();
             if(!query) return;
+            searchBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            searchBtn.disabled = true;
             try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&dedupe=1&q=${encodeURIComponent(query)}`, {
+                    headers: { 'Accept-Language': 'en' }
+                });
                 const data = await res.json();
-                if (data && data.length > 0) map.flyTo([data[0].lat, data[0].lon], 8);
-            } catch(err) { console.error(err); }
+                if (data && data.length > 0) {
+                    const result = data[0];
+                    const lat = parseFloat(result.lat);
+                    const lon = parseFloat(result.lon);
+                    const zoom = getZoomForType(result.type) || getZoomForType(result.class) || 16;
+                    map.flyTo([lat, lon], zoom, { duration: 1.5 });
+                    // Show a preview marker at the found location
+                    if(previewMarker) map.removeLayer(previewMarker);
+                    previewMarker = L.marker([lat, lon]).addTo(map);
+                    const locName = buildLocationName(result.address, result.display_name);
+                    previewMarker.bindPopup(`<b>${locName}</b><br><small>Click "Confirm Stop" to add this location</small>`).openPopup();
+                } else {
+                    alert('Location not found. Try a different search term or be more specific (e.g., "123 Main St, Dallas, TX").');
+                }
+            } catch(err) {
+                console.error(err);
+                alert('Search failed. Please check your connection and try again.');
+            } finally {
+                searchBtn.innerHTML = '<i class="fa-solid fa-search"></i>';
+                searchBtn.disabled = false;
+            }
         });
     }
 
@@ -290,17 +349,21 @@ function setupMap() {
         previewMarker = L.marker([lat, lng]).addTo(map);
         previewMarker.bindPopup('Analyzing...').openPopup();
 
-        let locName = `${lat.toFixed(2)}, ${lng.toFixed(2)}`;
+        let locName = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
         try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&zoom=18`, {
+                headers: { 'Accept-Language': 'en' }
+            });
             const data = await res.json();
             if (data && data.display_name) {
-                locName = data.address.city || data.address.town || data.address.state || locName;
+                locName = buildLocationName(data.address, data.display_name);
             }
-        } catch(err) {}
+        } catch(err) {
+            console.warn('Reverse geocoding failed:', err);
+        }
 
         const popupContent = document.createElement('div');
-        popupContent.innerHTML = `<b>${locName}</b><br>`;
+        popupContent.innerHTML = `<b>${locName}</b><br><small style="color:#8892b0;">${lat.toFixed(4)}, ${lng.toFixed(4)}</small><br>`;
         const btn = document.createElement('button');
         btn.className = 'btn-primary';
         btn.style.marginTop = '8px';
