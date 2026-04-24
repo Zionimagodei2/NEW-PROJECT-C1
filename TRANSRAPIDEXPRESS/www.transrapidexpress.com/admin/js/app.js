@@ -328,11 +328,30 @@ function setupMap() {
                     const lon = parseFloat(result.lon);
                     const zoom = getZoomForType(result.type) || getZoomForType(result.class) || 16;
                     map.flyTo([lat, lon], zoom, { duration: 1.5 });
-                    // Show a preview marker at the found location
+                    // Show a preview marker at the found location with a Confirm Stop button
                     if(previewMarker) map.removeLayer(previewMarker);
                     previewMarker = L.marker([lat, lon]).addTo(map);
                     const locName = buildLocationName(result.address, result.display_name);
-                    previewMarker.bindPopup(`<b>${locName}</b><br><small>Click "Confirm Stop" to add this location</small>`).openPopup();
+                    const popupContent = document.createElement('div');
+                    popupContent.innerHTML = `<b>${locName}</b><br><small style="color:#8892b0;">${lat.toFixed(4)}, ${lon.toFixed(4)}</small><br>`;
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-primary';
+                    btn.style.marginTop = '8px';
+                    btn.textContent = 'Confirm Stop';
+                    btn.onclick = () => {
+                        waypointsData.push({
+                            lat, lng: lon,
+                            name: locName,
+                            time: new Date().toLocaleString(),
+                            status: waypointsData.length === 0 ? "Shipment Started" : "Transit Update"
+                        });
+                        currentPositionIndex = waypointsData.length - 1;
+                        map.removeLayer(previewMarker);
+                        previewMarker = null;
+                        updateMapDrawings();
+                    };
+                    popupContent.appendChild(btn);
+                    previewMarker.bindPopup(popupContent).openPopup();
                 } else {
                     alert('Location not found. Try a different search term or be more specific (e.g., "123 Main St, Dallas, TX").');
                 }
