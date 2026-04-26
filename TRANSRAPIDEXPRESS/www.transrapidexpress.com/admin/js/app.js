@@ -334,23 +334,54 @@ function setupMap() {
                     const locName = buildLocationName(result.address, result.display_name);
                     const popupContent = document.createElement('div');
                     popupContent.innerHTML = `<b>${locName}</b><br><small style="color:#8892b0;">${lat.toFixed(4)}, ${lon.toFixed(4)}</small><br>`;
-                    const btn = document.createElement('button');
-                    btn.className = 'btn-primary';
-                    btn.style.marginTop = '8px';
-                    btn.textContent = 'Confirm Stop';
-                    btn.onclick = () => {
+                    // Two confirm buttons: one for Stop (bold), one for Transit (subtle)
+                    const btnRow = document.createElement('div');
+                    btnRow.style.marginTop = '8px';
+                    btnRow.style.display = 'flex';
+                    btnRow.style.gap = '6px';
+                    btnRow.style.flexWrap = 'wrap';
+
+                    const stopBtn = document.createElement('button');
+                    stopBtn.className = 'btn-primary';
+                    stopBtn.style.fontSize = '0.8rem';
+                    stopBtn.style.padding = '6px 12px';
+                    stopBtn.innerHTML = '<i class="fa-solid fa-location-dot"></i> Add as Stop';
+                    stopBtn.onclick = () => {
                         waypointsData.push({
                             lat, lng: lon,
                             name: locName,
                             time: new Date().toLocaleString(),
-                            status: waypointsData.length === 0 ? "Shipment Started" : "Transit Update"
+                            status: waypointsData.length === 0 ? "Shipment Started" : "Transit Update",
+                            stopType: 'stop'
                         });
                         currentPositionIndex = waypointsData.length - 1;
                         map.removeLayer(previewMarker);
                         previewMarker = null;
                         updateMapDrawings();
                     };
-                    popupContent.appendChild(btn);
+
+                    const transitBtn = document.createElement('button');
+                    transitBtn.className = 'btn-outline';
+                    transitBtn.style.fontSize = '0.8rem';
+                    transitBtn.style.padding = '6px 12px';
+                    transitBtn.innerHTML = '<i class="fa-solid fa-circle" style="font-size:0.5rem;"></i> Add as Transit';
+                    transitBtn.onclick = () => {
+                        waypointsData.push({
+                            lat, lng: lon,
+                            name: locName,
+                            time: new Date().toLocaleString(),
+                            status: "In transit",
+                            stopType: 'transit'
+                        });
+                        // Don't move current position to a transit point
+                        map.removeLayer(previewMarker);
+                        previewMarker = null;
+                        updateMapDrawings();
+                    };
+
+                    btnRow.appendChild(stopBtn);
+                    btnRow.appendChild(transitBtn);
+                    popupContent.appendChild(btnRow);
                     previewMarker.bindPopup(popupContent).openPopup();
                 } else {
                     alert('Location not found. Try a different search term or be more specific (e.g., "123 Main St, Dallas, TX").');
@@ -388,24 +419,54 @@ function setupMap() {
 
         const popupContent = document.createElement('div');
         popupContent.innerHTML = `<b>${locName}</b><br><small style="color:#8892b0;">${lat.toFixed(4)}, ${lng.toFixed(4)}</small><br>`;
-        const btn = document.createElement('button');
-        btn.className = 'btn-primary';
-        btn.style.marginTop = '8px';
-        btn.textContent = 'Confirm Stop';
-        btn.onclick = () => {
+        // Two confirm buttons: one for Stop (bold), one for Transit (subtle)
+        const btnRow = document.createElement('div');
+        btnRow.style.marginTop = '8px';
+        btnRow.style.display = 'flex';
+        btnRow.style.gap = '6px';
+        btnRow.style.flexWrap = 'wrap';
+
+        const stopBtn = document.createElement('button');
+        stopBtn.className = 'btn-primary';
+        stopBtn.style.fontSize = '0.8rem';
+        stopBtn.style.padding = '6px 12px';
+        stopBtn.innerHTML = '<i class="fa-solid fa-location-dot"></i> Add as Stop';
+        stopBtn.onclick = () => {
             waypointsData.push({
                 lat, lng,
                 name: locName,
                 time: new Date().toLocaleString(),
-                status: waypointsData.length === 0 ? "Shipment Started" : "Transit Update"
+                status: waypointsData.length === 0 ? "Shipment Started" : "Transit Update",
+                stopType: 'stop'
             });
-            // Default: set current position to the newly added waypoint
             currentPositionIndex = waypointsData.length - 1;
             map.removeLayer(previewMarker);
             previewMarker = null;
             updateMapDrawings();
         };
-        popupContent.appendChild(btn);
+
+        const transitBtn = document.createElement('button');
+        transitBtn.className = 'btn-outline';
+        transitBtn.style.fontSize = '0.8rem';
+        transitBtn.style.padding = '6px 12px';
+        transitBtn.innerHTML = '<i class="fa-solid fa-circle" style="font-size:0.5rem;"></i> Add as Transit';
+        transitBtn.onclick = () => {
+            waypointsData.push({
+                lat, lng,
+                name: locName,
+                time: new Date().toLocaleString(),
+                status: "In transit",
+                stopType: 'transit'
+            });
+            // Don't move current position to a transit point
+            map.removeLayer(previewMarker);
+            previewMarker = null;
+            updateMapDrawings();
+        };
+
+        btnRow.appendChild(stopBtn);
+        btnRow.appendChild(transitBtn);
+        popupContent.appendChild(btnRow);
         previewMarker.bindPopup(popupContent).openPopup();
     });
 
@@ -443,29 +504,53 @@ function updateMapDrawings() {
     markers.forEach(m => map.removeLayer(m));
     markers.length = 0;
 
+    // Determine which stop-type waypoints are origin, current, dest
+    const stopWaypoints = waypointsData.map((wp, i) => ({ ...wp, origIndex: i })).filter(wp => wp.stopType === 'stop');
+
     waypointsData.forEach((wp, i) => {
-        let iconClass = 'standard-marker';
+        const isStop = wp.stopType === 'stop';
+        const isOrigin = (i === 0 && isStop);
+        const isCurrent = (i === currentPositionIndex && isStop);
+        // Last stop-type waypoint is the destination (if not origin or current)
+        const lastStopIdx = stopWaypoints.length > 0 ? stopWaypoints[stopWaypoints.length - 1].origIndex : -1;
+        const isDest = (i === lastStopIdx && i !== 0 && i !== currentPositionIndex && isStop);
+
+        let iconClass;
+        let iconSize;
         let label = wp.name.split(',')[0];
 
-        if (i === 0) {
-            iconClass = 'standard-marker origin-marker';
-        }
-        // Use currentPositionIndex for the pulse marker instead of always the last
-        if (i === currentPositionIndex && waypointsData.length > 1) {
+        if (isCurrent && waypointsData.length > 1) {
             iconClass = 'pulse-marker';
+            iconSize = [20, 20];
+        } else if (isOrigin) {
+            iconClass = 'standard-marker origin-marker';
+            iconSize = [14, 14];
+        } else if (isDest) {
+            iconClass = 'standard-marker dest-marker';
+            iconSize = [14, 14];
+        } else if (isStop) {
+            iconClass = 'standard-marker stop-marker';
+            iconSize = [14, 14];
+        } else {
+            // Transit point — subtle small dot
+            iconClass = 'transit-marker';
+            iconSize = [8, 8];
         }
 
         const m = L.marker([wp.lat, wp.lng], {
-            icon: L.divIcon({ className: 'custom-div-icon', html: `<div class="${iconClass}"></div>`, iconSize: [20,20] })
+            icon: L.divIcon({ className: 'custom-div-icon', html: `<div class="${iconClass}"></div>`, iconSize: iconSize })
         }).addTo(map);
 
-        // Add label showing position type
+        // Only show tooltip for stops; transit points get a minimal label on hover
         let tooltipLabel = label;
-        if (i === 0) tooltipLabel = 'ORIGIN: ' + label;
-        if (i === currentPositionIndex) tooltipLabel = 'CURRENT: ' + label;
-        if (i === waypointsData.length - 1 && i !== currentPositionIndex && i !== 0) tooltipLabel = 'DEST: ' + label;
+        if (isOrigin) tooltipLabel = 'ORIGIN: ' + label;
+        else if (isCurrent) tooltipLabel = 'CURRENT: ' + label;
+        else if (isDest) tooltipLabel = 'DESTINATION: ' + label;
+        else if (isStop) tooltipLabel = 'STOP: ' + label;
+        else tooltipLabel = label; // transit
 
-        m.bindTooltip(tooltipLabel, { direction: 'top', className: 'sophisticated-label', offset: [0,-10] });
+        const tooltipClass = isStop ? 'sophisticated-label' : 'sophisticated-label transit-label';
+        m.bindTooltip(tooltipLabel, { direction: 'top', className: tooltipClass, offset: [0,-10] });
         markers.push(m);
     });
 
@@ -474,25 +559,73 @@ function updateMapDrawings() {
         routePolyline = L.polyline(waypointsData.map(w => [w.lat, w.lng]), {color: '#FF9F1C', weight: 4, dashArray: '5, 10'}).addTo(map);
     }
 
-    document.getElementById('waypointsCount').textContent = `${waypointsData.length} stops plotted`;
+    const stopCount = waypointsData.filter(wp => wp.stopType === 'stop').length;
+    const transitCount = waypointsData.filter(wp => wp.stopType === 'transit').length;
+    document.getElementById('waypointsCount').textContent = `${stopCount} stop${stopCount !== 1 ? 's' : ''}, ${transitCount} transit point${transitCount !== 1 ? 's' : ''}`;
+
     const list = document.getElementById('timelineList');
     list.innerHTML = '';
 
+    const lastStopIdx = stopWaypoints.length > 0 ? stopWaypoints[stopWaypoints.length - 1].origIndex : -1;
+
     waypointsData.forEach((wp, i) => {
-        const isCurrentPos = (i === currentPositionIndex);
-        const isOrigin = (i === 0);
-        const isLast = (i === waypointsData.length - 1);
+        const isStop = wp.stopType === 'stop';
+        const isCurrentPos = (i === currentPositionIndex && isStop);
+        const isOrigin = (i === 0 && isStop);
+        const isDest = (i === lastStopIdx && i !== 0 && i !== currentPositionIndex && isStop);
 
         let positionTag = '';
         if (isOrigin) positionTag = '<span style="font-size:0.7em;color:#2ecc71;border:1px solid #2ecc71;padding:2px 6px;border-radius:10px;margin-left:8px;">ORIGIN</span>';
         if (isCurrentPos) positionTag = '<span style="font-size:0.7em;color:#e74c3c;border:1px solid #e74c3c;padding:2px 6px;border-radius:10px;margin-left:8px;">CURRENT</span>';
-        if (isLast && !isCurrentPos && !isOrigin && waypointsData.length > 2) positionTag = '<span style="font-size:0.7em;color:#f39c12;border:1px solid #f39c12;padding:2px 6px;border-radius:10px;margin-left:8px;">DEST</span>';
+        if (isDest) positionTag = '<span style="font-size:0.7em;color:#f39c12;border:1px solid #f39c12;padding:2px 6px;border-radius:10px;margin-left:8px;">DEST</span>';
+        if (!isStop) positionTag = '<span style="font-size:0.65em;color:#8892b0;border:1px solid rgba(136,146,176,0.4);padding:2px 6px;border-radius:10px;margin-left:8px;">TRANSIT</span>';
 
-        const setAsCurrentBtn = isCurrentPos ? '' : `<button onclick="setCurrentPosition(${i})" style="margin-top:6px;font-size:0.75rem;background:rgba(231,76,60,0.2);color:#e74c3c;border:1px solid rgba(231,76,60,0.4);padding:3px 10px;border-radius:6px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(231,76,60,0.4)'" onmouseout="this.style.background='rgba(231,76,60,0.2)'"><i class="fa-solid fa-location-crosshairs"></i> Set as Current Position</button>`;
+        const setAsCurrentBtn = (isStop && !isCurrentPos) ? `<button onclick="setCurrentPosition(${i})" style="margin-top:6px;font-size:0.75rem;background:rgba(231,76,60,0.2);color:#e74c3c;border:1px solid rgba(231,76,60,0.4);padding:3px 10px;border-radius:6px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(231,76,60,0.4)'" onmouseout="this.style.background='rgba(231,76,60,0.2)'"><i class="fa-solid fa-location-crosshairs"></i> Set as Current Position</button>` : '';
 
-        list.innerHTML += `<div class="stop-item" style="${isCurrentPos ? 'border-left-color:#e74c3c;background:rgba(231,76,60,0.08);' : ''}"><strong>${wp.name}</strong>${positionTag}<br><small>${wp.time}</small><br><small style="color:#8892b0;">${wp.status || 'Location updated'}</small><br>${setAsCurrentBtn}</div>`;
+        // Toggle stop type button
+        const toggleBtn = isStop
+            ? `<button onclick="toggleStopType(${i})" style="margin-top:4px;font-size:0.7rem;background:rgba(136,146,176,0.15);color:#8892b0;border:1px solid rgba(136,146,176,0.3);padding:2px 8px;border-radius:6px;cursor:pointer;margin-left:4px;" onmouseover="this.style.background='rgba(136,146,176,0.3)'" onmouseout="this.style.background='rgba(136,146,176,0.15)'"><i class="fa-solid fa-minus"></i> Make Transit</button>`
+            : `<button onclick="toggleStopType(${i})" style="margin-top:4px;font-size:0.7rem;background:rgba(255,159,28,0.15);color:#FF9F1C;border:1px solid rgba(255,159,28,0.3);padding:2px 8px;border-radius:6px;cursor:pointer;margin-left:4px;" onmouseover="this.style.background='rgba(255,159,28,0.3)'" onmouseout="this.style.background='rgba(255,159,28,0.15)'"><i class="fa-solid fa-plus"></i> Make Stop</button>`;
+
+        const itemStyle = isCurrentPos
+            ? 'border-left-color:#e74c3c;background:rgba(231,76,60,0.08);'
+            : isStop
+                ? 'border-left-color:var(--accent-gold);'
+                : 'border-left-color:rgba(136,146,176,0.3);background:rgba(0,0,0,0.1);opacity:0.75;';
+
+        const nameStyle = isStop ? 'font-weight:600;' : 'font-weight:400;color:#8892b0;';
+
+        list.innerHTML += `<div class="stop-item" style="${itemStyle}"><span style="${nameStyle}">${wp.name}</span>${positionTag}<br><small>${wp.time}</small><br><small style="color:#8892b0;">${wp.status || 'Location updated'}</small><br>${setAsCurrentBtn}${toggleBtn}</div>`;
     });
 }
+
+// Global: Toggle a waypoint between 'stop' and 'transit'
+window.toggleStopType = function(index) {
+    if (index < 0 || index >= waypointsData.length) return;
+    const wp = waypointsData[index];
+    wp.stopType = wp.stopType === 'stop' ? 'transit' : 'stop';
+
+    // If changing FROM stop to transit and this was the current position,
+    // move current position to the nearest stop before this one
+    if (wp.stopType === 'transit' && index === currentPositionIndex) {
+        let found = -1;
+        for (let i = waypointsData.length - 1; i >= 0; i--) {
+            if (i !== index && waypointsData[i].stopType === 'stop') {
+                found = i;
+                break;
+            }
+        }
+        currentPositionIndex = found;
+    }
+
+    // If the first waypoint is changed to transit, force it back to stop (origin is always a stop)
+    if (index === 0 && wp.stopType === 'transit') {
+        wp.stopType = 'stop';
+        alert('The first point (Origin) must always be a Stop.');
+    }
+
+    updateMapDrawings();
+};
 
 // --- Status Loader ---
 async function loadDashboardStats(elements) {
@@ -645,8 +778,8 @@ window.editShipment = async function(trackingCode) {
         document.getElementById('receiverEmail').value = shipment.receiverEmail || '';
         document.getElementById('receiverPhone').value = shipment.receiverPhone || '';
 
-        // Restore waypoints
-        waypointsData = shipment.waypoints ? [...shipment.waypoints] : [];
+        // Restore waypoints (ensure backward compatibility: default stopType to 'stop' for old data)
+        waypointsData = shipment.waypoints ? shipment.waypoints.map(wp => ({ ...wp, stopType: wp.stopType || 'stop' })) : [];
         currentPositionIndex = shipment.currentPositionIndex !== undefined ? shipment.currentPositionIndex : (waypointsData.length > 0 ? waypointsData.length - 1 : -1);
 
         updateMapDrawings();

@@ -78,6 +78,19 @@ if (isTrackPage) {
             border: 2px solid white; transform: translate(-50%, -50%);
         }
         .origin-marker-client { background: #2ecc71; border-color: white; }
+        .dest-marker-client { background: #f39c12; border-color: white; box-shadow: 0 0 5px rgba(243,156,18,0.5); }
+        .stop-marker-client { background: #3498db; border-color: white; box-shadow: 0 0 5px rgba(52,152,219,0.5); }
+        .transit-marker-client {
+            background: rgba(136, 146, 176, 0.5); border-radius: 50%; width: 8px; height: 8px;
+            border: 1px solid rgba(255,255,255,0.3); transform: translate(-50%, -50%);
+        }
+        .transit-label-client {
+            background: rgba(10, 22, 40, 0.6) !important;
+            border: 1px solid rgba(136, 146, 176, 0.3) !important;
+            font-size: 0.7rem !important;
+            font-weight: 400 !important;
+            color: #8892b0 !important;
+        }
 
         .sophisticated-label {
             background: rgba(10, 22, 40, 0.85);
@@ -352,13 +365,25 @@ window.addEventListener('DOMContentLoaded', () => {
             const wps = [...ship.waypoints].reverse();
             // In the reversed array, the "current" item index is reversed too
             const reversedCpIdx = ship.waypoints.length - 1 - cpIdx;
+            // Find last stop-type waypoint for DEST label
+            const stopIndices = ship.waypoints.map((wp, i) => ({ ...wp, origIndex: i })).filter(wp => wp.stopType === 'stop');
+            const lastStopOrigIdx = stopIndices.length > 0 ? stopIndices[stopIndices.length - 1].origIndex : -1;
+            const reversedDestIdx = lastStopOrigIdx >= 0 ? ship.waypoints.length - 1 - lastStopOrigIdx : -1;
+
             wps.forEach((wp, index) => {
-                const isCurrent = index === reversedCpIdx;
-                const isOrigin = index === wps.length - 1; // last in reversed = first in original
+                const isStop = wp.stopType === 'stop';
+                const isCurrent = (index === reversedCpIdx) && isStop;
+                const isOrigin = (index === wps.length - 1) && isStop; // last in reversed = first in original
+                const isDest = (index === reversedDestIdx) && index !== wps.length - 1 && index !== reversedCpIdx && isStop;
                 let badge = '';
                 if (isCurrent) badge = '<span style="font-size:0.7em;color:#e74c3c;border:1px solid #e74c3c;padding:2px 6px;border-radius:10px;margin-left:10px;">CURRENT POSITION</span>';
-                if (isOrigin && !isCurrent) badge = '<span style="font-size:0.7em;color:#2ecc71;border:1px solid #2ecc71;padding:2px 6px;border-radius:10px;margin-left:10px;">ORIGIN</span>';
-                tlist.innerHTML += '<div class="timeline-item"><h4>' + wp.name + ' ' + badge + '</h4><div class="timeline-date">' + wp.time + '</div><p style="color:#8892b0;font-size:0.85rem;">' + (wp.status || 'Location updated') + '</p></div>';
+                else if (isOrigin) badge = '<span style="font-size:0.7em;color:#2ecc71;border:1px solid #2ecc71;padding:2px 6px;border-radius:10px;margin-left:10px;">ORIGIN</span>';
+                else if (isDest) badge = '<span style="font-size:0.7em;color:#f39c12;border:1px solid #f39c12;padding:2px 6px;border-radius:10px;margin-left:10px;">DESTINATION</span>';
+                else if (!isStop) badge = '<span style="font-size:0.6em;color:#8892b0;border:1px solid rgba(136,146,176,0.4);padding:1px 5px;border-radius:10px;margin-left:10px;">TRANSIT</span>';
+
+                const nameStyle = isStop ? 'font-weight:600;' : 'font-weight:400;color:#8892b0;';
+                const itemStyle = isCurrent ? 'border-left:2px solid #e74c3c;' : (!isStop ? 'opacity:0.65;' : '');
+                tlist.innerHTML += '<div class="timeline-item" style="' + itemStyle + '"><h4 style="' + nameStyle + '">' + wp.name + ' ' + badge + '</h4><div class="timeline-date">' + wp.time + '</div><p style="color:#8892b0;font-size:0.85rem;">' + (wp.status || 'Location updated') + '</p></div>';
             });
         }
 
@@ -378,6 +403,10 @@ window.addEventListener('DOMContentLoaded', () => {
         // Use provided cpIdx or default to last waypoint for backward compatibility
         if (cpIdx === undefined || cpIdx === null || cpIdx < 0) cpIdx = waypoints.length - 1;
 
+        // Find last stop-type waypoint for DEST label
+        const stopWaypoints = waypoints.map((wp, i) => ({ ...wp, origIndex: i })).filter(wp => wp.stopType === 'stop');
+        const lastStopIdx = stopWaypoints.length > 0 ? stopWaypoints[stopWaypoints.length - 1].origIndex : -1;
+
         // Center the map on the current position
         const center = [waypoints[cpIdx].lat, waypoints[cpIdx].lng];
         const map = L.map('track-map').setView(center, 6);
@@ -395,31 +424,52 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         waypoints.forEach((wp, i) => {
-            const isFirst = i === 0;
-            const isCurrent = i === cpIdx;
+            const isStop = wp.stopType === 'stop';
+            const isFirst = (i === 0 && isStop);
+            const isCurrent = (i === cpIdx && isStop);
+            const isDest = (i === lastStopIdx && i !== 0 && i !== cpIdx && isStop);
 
-            let markerClass = 'standard-marker-client';
-            if (isFirst) markerClass = 'standard-marker-client origin-marker-client';
-            if (isCurrent && waypoints.length > 1) markerClass = 'pulse-marker-client';
+            let markerClass, iconSize;
+            if (isCurrent && waypoints.length > 1) {
+                markerClass = 'pulse-marker-client';
+                iconSize = [20, 20];
+            } else if (isFirst) {
+                markerClass = 'standard-marker-client origin-marker-client';
+                iconSize = [14, 14];
+            } else if (isDest) {
+                markerClass = 'standard-marker-client dest-marker-client';
+                iconSize = [14, 14];
+            } else if (isStop) {
+                markerClass = 'standard-marker-client stop-marker-client';
+                iconSize = [14, 14];
+            } else {
+                // Transit point — subtle small dot
+                markerClass = 'transit-marker-client';
+                iconSize = [8, 8];
+            }
 
             const customIcon = L.divIcon({
                 className: 'custom-div-icon',
                 html: '<div class="' + markerClass + '"></div>',
-                iconSize: [20, 20],
-                iconAnchor: [10, 10]
+                iconSize: iconSize,
+                iconAnchor: [iconSize[0] / 2, iconSize[1] / 2]
             });
 
             // Build tooltip label with position type
             let tooltipLabel = wp.name.split(',')[0];
             if (isFirst) tooltipLabel = 'ORIGIN: ' + tooltipLabel;
-            if (isCurrent) tooltipLabel = 'CURRENT: ' + tooltipLabel;
-            if (i === waypoints.length - 1 && !isCurrent && !isFirst && waypoints.length > 2) tooltipLabel = 'DEST: ' + tooltipLabel;
+            else if (isCurrent) tooltipLabel = 'CURRENT: ' + tooltipLabel;
+            else if (isDest) tooltipLabel = 'DESTINATION: ' + tooltipLabel;
+            else if (isStop) tooltipLabel = 'STOP: ' + tooltipLabel;
+            // Transit points just show the name
+
+            const tooltipClass = isStop ? 'sophisticated-label' : 'sophisticated-label transit-label-client';
 
             const m = L.marker([wp.lat, wp.lng], { icon: customIcon }).addTo(map);
             m.bindTooltip(tooltipLabel, {
                 permanent: false,
                 direction: 'top',
-                className: 'sophisticated-label',
+                className: tooltipClass,
                 offset: [0, -10]
             });
         });
