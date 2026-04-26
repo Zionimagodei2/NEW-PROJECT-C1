@@ -555,8 +555,21 @@ function updateMapDrawings() {
     });
 
     if (routePolyline) map.removeLayer(routePolyline);
-    if (waypointsData.length > 1) {
-        routePolyline = L.polyline(waypointsData.map(w => [w.lat, w.lng]), {color: '#FF9F1C', weight: 4, dashArray: '5, 10'}).addTo(map);
+    // Two-color route line: Traveled (origin→current) = light blue dashed, Remaining (current→dest) = gray solid
+    if (waypointsData.length > 1 && currentPositionIndex >= 0) {
+        const traveledPoints = waypointsData.slice(0, currentPositionIndex + 1).map(w => [w.lat, w.lng]);
+        const remainingPoints = waypointsData.slice(currentPositionIndex).map(w => [w.lat, w.lng]);
+
+        // Traveled segment: light blue dashed
+        if (traveledPoints.length > 1) {
+            routePolyline = L.polyline(traveledPoints, { color: '#64B5F6', weight: 4, dashArray: '8, 12', opacity: 0.9 }).addTo(map);
+        }
+        // Remaining segment: gray solid
+        if (remainingPoints.length > 1) {
+            L.polyline(remainingPoints, { color: '#78909C', weight: 4, opacity: 0.7 }).addTo(map);
+        }
+    } else if (waypointsData.length > 1) {
+        routePolyline = L.polyline(waypointsData.map(w => [w.lat, w.lng]), {color: '#64B5F6', weight: 4, dashArray: '8, 12'}).addTo(map);
     }
 
     const stopCount = waypointsData.filter(wp => wp.stopType === 'stop').length;
@@ -575,12 +588,12 @@ function updateMapDrawings() {
         const isDest = (i === lastStopIdx && i !== 0 && i !== currentPositionIndex && isStop);
 
         let positionTag = '';
-        if (isOrigin) positionTag = '<span style="font-size:0.7em;color:#2ecc71;border:1px solid #2ecc71;padding:2px 6px;border-radius:10px;margin-left:8px;">ORIGIN</span>';
-        if (isCurrentPos) positionTag = '<span style="font-size:0.7em;color:#e74c3c;border:1px solid #e74c3c;padding:2px 6px;border-radius:10px;margin-left:8px;">CURRENT</span>';
-        if (isDest) positionTag = '<span style="font-size:0.7em;color:#f39c12;border:1px solid #f39c12;padding:2px 6px;border-radius:10px;margin-left:8px;">DEST</span>';
+        if (isOrigin) positionTag = '<span style="font-size:0.7em;color:#4CAF50;border:1px solid #4CAF50;padding:2px 6px;border-radius:10px;margin-left:8px;">ORIGIN</span>';
+        if (isCurrentPos) positionTag = '<span style="font-size:0.7em;color:#2196F3;border:1px solid #2196F3;padding:2px 6px;border-radius:10px;margin-left:8px;">CURRENT</span>';
+        if (isDest) positionTag = '<span style="font-size:0.7em;color:#F44336;border:1px solid #F44336;padding:2px 6px;border-radius:10px;margin-left:8px;">DEST</span>';
         if (!isStop) positionTag = '<span style="font-size:0.65em;color:#8892b0;border:1px solid rgba(136,146,176,0.4);padding:2px 6px;border-radius:10px;margin-left:8px;">TRANSIT</span>';
 
-        const setAsCurrentBtn = (isStop && !isCurrentPos) ? `<button onclick="setCurrentPosition(${i})" style="margin-top:6px;font-size:0.75rem;background:rgba(231,76,60,0.2);color:#e74c3c;border:1px solid rgba(231,76,60,0.4);padding:3px 10px;border-radius:6px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(231,76,60,0.4)'" onmouseout="this.style.background='rgba(231,76,60,0.2)'"><i class="fa-solid fa-location-crosshairs"></i> Set as Current Position</button>` : '';
+        const setAsCurrentBtn = (isStop && !isCurrentPos) ? `<button onclick="setCurrentPosition(${i})" style="margin-top:6px;font-size:0.75rem;background:rgba(33,150,243,0.2);color:#2196F3;border:1px solid rgba(33,150,243,0.4);padding:3px 10px;border-radius:6px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(33,150,243,0.4)'" onmouseout="this.style.background='rgba(33,150,243,0.2)'"><i class="fa-solid fa-location-crosshairs"></i> Set as Current Position</button>` : '';
 
         // Toggle stop type button
         const toggleBtn = isStop
@@ -588,7 +601,7 @@ function updateMapDrawings() {
             : `<button onclick="toggleStopType(${i})" style="margin-top:4px;font-size:0.7rem;background:rgba(255,159,28,0.15);color:#FF9F1C;border:1px solid rgba(255,159,28,0.3);padding:2px 8px;border-radius:6px;cursor:pointer;margin-left:4px;" onmouseover="this.style.background='rgba(255,159,28,0.3)'" onmouseout="this.style.background='rgba(255,159,28,0.15)'"><i class="fa-solid fa-plus"></i> Make Stop</button>`;
 
         const itemStyle = isCurrentPos
-            ? 'border-left-color:#e74c3c;background:rgba(231,76,60,0.08);'
+            ? 'border-left-color:#2196F3;background:rgba(33,150,243,0.08);'
             : isStop
                 ? 'border-left-color:var(--accent-gold);'
                 : 'border-left-color:rgba(136,146,176,0.3);background:rgba(0,0,0,0.1);opacity:0.75;';

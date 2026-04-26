@@ -246,6 +246,15 @@
 <div class="glass-panel form-panel map-panel">
 <h3><i class="fa-solid fa-map-location-dot"></i> Live Shipment Map Control</h3>
 <p class="text-sm text-muted mb-3">Click on the map or search addresses to plot route points. Choose <strong>"Add as Stop"</strong> for key locations (Origin, Current, Destination) shown as bold colored dots, or <strong>"Add as Transit"</strong> for route waypoints shown as subtle dots. You can also toggle between Stop/Transit in the timeline below.</p>
+<div class="map-legend">
+    <div class="map-legend-item"><span class="map-legend-dot origin"></span> ORIGIN</div>
+    <div class="map-legend-item"><span class="map-legend-dot current"></span> CURRENT</div>
+    <div class="map-legend-item"><span class="map-legend-dot dest"></span> DEST</div>
+</div>
+<div class="route-legend">
+    <div class="route-legend-item"><span class="route-legend-line traveled"></span> Traveled</div>
+    <div class="route-legend-item"><span class="route-legend-line remaining"></span> Remaining</div>
+</div>
 <div class="map-search">
 <input id="mapSearchInput" placeholder="Search address, e.g. 271 Forest Ln, Dallas, TX 75234" type="text"/>
 <button class="btn-primary btn-sm" id="mapSearchBtn"><i class="fa-solid fa-search"></i></button>

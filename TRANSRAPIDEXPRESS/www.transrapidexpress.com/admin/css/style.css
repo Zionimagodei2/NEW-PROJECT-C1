@@ -231,12 +231,12 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
 
 /* -- Map Customizations -- */
 .pulse-marker {
-    background: #e74c3c;
+    background: #2196F3;
     border-radius: 50%;
     width: 20px;
     height: 20px;
     border: 3px solid white;
-    box-shadow: 0 0 10px rgba(231, 76, 60, 0.8);
+    box-shadow: 0 0 10px rgba(33, 150, 243, 0.8);
     position: relative;
     transform: translate(-50%, -50%);
 }
@@ -244,7 +244,7 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
     content: '';
     position: absolute;
     top: -10px; left: -10px; right: -10px; bottom: -10px;
-    border: 2px solid #e74c3c;
+    border: 2px solid #2196F3;
     border-radius: 50%;
     animation: beckon 1.5s infinite ease-out;
 }
@@ -260,9 +260,9 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
     box-shadow: 0 0 5px rgba(0,0,0,0.5);
     transform: translate(-50%, -50%);
 }
-.origin-marker { background: #2ecc71; border-color: white; }
-.dest-marker { background: #f39c12; border-color: white; box-shadow: 0 0 5px rgba(243,156,18,0.5); }
-.stop-marker { background: #3498db; border-color: white; box-shadow: 0 0 5px rgba(52,152,219,0.5); }
+.origin-marker { background: #4CAF50; border-color: white; box-shadow: 0 0 8px rgba(76,175,80,0.6); }
+.dest-marker { background: #F44336; border-color: white; box-shadow: 0 0 8px rgba(244,67,54,0.6); }
+.stop-marker { background: #2196F3; border-color: white; box-shadow: 0 0 5px rgba(33,150,243,0.5); }
 .transit-marker {
     background: rgba(136, 146, 176, 0.5);
     border-radius: 50%;
@@ -277,6 +277,54 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
     font-weight: 400 !important;
     color: #8892b0 !important;
 }
+/* Map Legend */
+.map-legend {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.3rem;
+    flex-wrap: wrap;
+}
+.map-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+}
+.map-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.map-legend-dot.origin { background: #4CAF50; }
+.map-legend-dot.current { background: #2196F3; }
+.map-legend-dot.dest { background: #F44336; }
+.route-legend {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    margin-bottom: 0.3rem;
+    flex-wrap: wrap;
+}
+.route-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+.route-legend-line {
+    width: 20px;
+    height: 3px;
+    display: inline-block;
+    border-radius: 2px;
+}
+.route-legend-line.traveled { background: #64B5F6; }
+.route-legend-line.remaining { background: #78909C; }
 
 .sophisticated-label {
     background: rgba(10, 22, 40, 0.85);

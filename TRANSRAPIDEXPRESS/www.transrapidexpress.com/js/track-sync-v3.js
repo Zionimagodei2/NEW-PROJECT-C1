@@ -54,21 +54,22 @@ if (isTrackPage) {
         .info-group { margin-bottom: 1rem; }
         .info-label { color: #8892b0; font-size: 0.85rem; display: block; margin-bottom: 0.2rem; }
         .info-val { font-weight: 500; }
-        .map-container { height: 400px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin-top: 2rem; }
+        .map-container { height: 400px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin-top: 1rem; }
         .timeline { margin-top: 2rem; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 1.5rem; }
         .timeline-item { position: relative; margin-bottom: 2rem; }
         .timeline-item::before { content: ''; position: absolute; left: -1.8rem; top: 0; width: 12px; height: 12px; border-radius: 50%; background: #FF9F1C; }
         .timeline-item h4 { color: #FF9F1C; margin-bottom: 0.2rem; }
         .timeline-date { font-size: 0.8rem; color: #8892b0; margin-bottom: 0.5rem; }
 
+        /* Marker Styles — matching predecessor site */
         .pulse-marker-client {
-            background: #e74c3c; border-radius: 50%; width: 20px; height: 20px;
-            border: 3px solid white; box-shadow: 0 0 10px rgba(231, 76, 60, 0.8);
+            background: #2196F3; border-radius: 50%; width: 20px; height: 20px;
+            border: 3px solid white; box-shadow: 0 0 10px rgba(33, 150, 243, 0.8);
             position: relative; transform: translate(-50%, -50%);
         }
         .pulse-marker-client::before {
             content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px;
-            border: 2px solid #e74c3c; border-radius: 50%;
+            border: 2px solid #2196F3; border-radius: 50%;
             animation: beckon 1.5s infinite ease-out;
         }
         @keyframes beckon { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
@@ -77,9 +78,9 @@ if (isTrackPage) {
             background: #3498db; border-radius: 50%; width: 14px; height: 14px;
             border: 2px solid white; transform: translate(-50%, -50%);
         }
-        .origin-marker-client { background: #2ecc71; border-color: white; }
-        .dest-marker-client { background: #f39c12; border-color: white; box-shadow: 0 0 5px rgba(243,156,18,0.5); }
-        .stop-marker-client { background: #3498db; border-color: white; box-shadow: 0 0 5px rgba(52,152,219,0.5); }
+        .origin-marker-client { background: #4CAF50; border-color: white; box-shadow: 0 0 8px rgba(76,175,80,0.6); }
+        .dest-marker-client { background: #F44336; border-color: white; box-shadow: 0 0 8px rgba(244,67,54,0.6); }
+        .stop-marker-client { background: #2196F3; border-color: white; box-shadow: 0 0 5px rgba(33,150,243,0.5); }
         .transit-marker-client {
             background: rgba(136, 146, 176, 0.5); border-radius: 50%; width: 8px; height: 8px;
             border: 1px solid rgba(255,255,255,0.3); transform: translate(-50%, -50%);
@@ -105,6 +106,74 @@ if (isTrackPage) {
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
         }
         .sophisticated-label::before { display: none; }
+
+        /* Map Legend */
+        .map-legend {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-top: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .map-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        .map-legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .map-legend-dot.origin { background: #4CAF50; }
+        .map-legend-dot.current { background: #2196F3; }
+        .map-legend-dot.dest { background: #F44336; }
+
+        /* Route legend (traveled vs remaining) */
+        .route-legend {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .route-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        .route-legend-line {
+            width: 24px;
+            height: 3px;
+            display: inline-block;
+            border-radius: 2px;
+        }
+        .route-legend-line.traveled { background: #64B5F6; }
+        .route-legend-line.remaining { background: #78909C; }
+
+        /* Success notification banner */
+        .track-success-banner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: rgba(76, 175, 80, 0.15);
+            border: 1px solid rgba(76, 175, 80, 0.4);
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            color: #4CAF50;
+            font-weight: 600;
+            font-size: 0.9rem;
+            animation: slideIn 0.4s ease-out;
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
         .track-error-msg {
             color: #ff4757;
@@ -136,6 +205,7 @@ if (isTrackPage) {
             .status-card { flex-direction: column; text-align: center; gap: 1rem; }
             .status-card div { text-align: center !important; }
             .map-container { height: 300px; }
+            .map-legend { gap: 1rem; }
         }
     `;
     document.head.appendChild(trackStyles);
@@ -161,6 +231,10 @@ window.addEventListener('DOMContentLoaded', () => {
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
             Track Another Shipment
         </button>
+        <div id="track-success-banner" class="track-success-banner" style="display:none;">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span>Shipment found. Live tracking loaded.</span>
+        </div>
         <div class="result-header">
             <h2 style="color: #ffffff; font-size: 1.5rem; font-weight: bold;">SHIPMENT DETAILS</h2>
             <p style="color: #94a3b8;">Tracking Code: <strong style="color: #FF9F1C;" id="res-code">--</strong></p>
@@ -220,10 +294,23 @@ window.addEventListener('DOMContentLoaded', () => {
                 <div class="info-group"><span class="info-label">Last Updated</span><span class="info-val" id="res-last-updated">--</span></div>
             </div>
         </div>
-        <h3 style="margin: 2rem 0 1rem; color: #ffffff;">LIVE SHIPMENT MAP</h3>
+        <h3 style="margin: 1.5rem 0 0.5rem; color: #ffffff;">LIVE SHIPMENT MAP</h3>
+        <div class="map-legend">
+            <div class="map-legend-item"><span class="map-legend-dot origin"></span> ORIGIN</div>
+            <div class="map-legend-item"><span class="map-legend-dot current"></span> CURRENT</div>
+            <div class="map-legend-item"><span class="map-legend-dot dest"></span> DEST</div>
+        </div>
+        <div class="route-legend">
+            <div class="route-legend-item"><span class="route-legend-line traveled"></span> Traveled</div>
+            <div class="route-legend-item"><span class="route-legend-line remaining"></span> Remaining</div>
+        </div>
         <p style="color: #8892b0; font-size: 0.9rem;" id="res-current-loc">Current Location: --</p>
         <div id="track-map" class="map-container"></div>
-        <h3 style="margin: 2rem 0 1rem; color: #ffffff;">SHIPMENT TIMELINE</h3>
+        <h3 style="margin: 2rem 0 0.5rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+            <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            LOCATION HISTORY
+            <span id="res-stop-count" style="font-size:0.75rem;color:#94a3b8;font-weight:400;margin-left:8px;"></span>
+        </h3>
         <div class="timeline" id="res-timeline"></div>
     `;
 
@@ -256,6 +343,8 @@ window.addEventListener('DOMContentLoaded', () => {
             mainCode.value = '';
             mainPin.value = '';
             errorMsg.style.display = 'none';
+            // Hide success banner
+            document.getElementById('track-success-banner').style.display = 'none';
             // Remove map
             const mapEl = document.getElementById('track-map');
             if (mapEl) mapEl.innerHTML = '';
@@ -324,6 +413,10 @@ window.addEventListener('DOMContentLoaded', () => {
         document.querySelector('.credentials-info').style.display = 'none';
         resultContainer.classList.add('active');
 
+        // Show success banner
+        const banner = document.getElementById('track-success-banner');
+        if (banner) banner.style.display = 'flex';
+
         document.getElementById('res-code').textContent = code;
         document.getElementById('res-status').textContent = ship.pkgStatus || 'Pending';
         document.getElementById('res-date').textContent = ship.pkgEstDelivery || 'Unknown';
@@ -358,6 +451,11 @@ window.addEventListener('DOMContentLoaded', () => {
         const currentLoc = (ship.waypoints && ship.waypoints[cpIdx]) ? ship.waypoints[cpIdx].name : (ship.waypoints && ship.waypoints.length > 0 ? ship.waypoints[ship.waypoints.length - 1].name : 'Unknown');
         document.getElementById('res-current-loc').textContent = 'Current Location: ' + currentLoc;
 
+        // Count stops for the header
+        const stopCount = ship.waypoints ? ship.waypoints.filter(wp => wp.stopType === 'stop').length : 0;
+        const stopCountEl = document.getElementById('res-stop-count');
+        if (stopCountEl) stopCountEl.textContent = stopCount + ' STOP' + (stopCount !== 1 ? 'S' : '');
+
         // Populate Timeline
         const tlist = document.getElementById('res-timeline');
         tlist.innerHTML = '';
@@ -376,13 +474,13 @@ window.addEventListener('DOMContentLoaded', () => {
                 const isOrigin = (index === wps.length - 1) && isStop; // last in reversed = first in original
                 const isDest = (index === reversedDestIdx) && index !== wps.length - 1 && index !== reversedCpIdx && isStop;
                 let badge = '';
-                if (isCurrent) badge = '<span style="font-size:0.7em;color:#e74c3c;border:1px solid #e74c3c;padding:2px 6px;border-radius:10px;margin-left:10px;">CURRENT POSITION</span>';
-                else if (isOrigin) badge = '<span style="font-size:0.7em;color:#2ecc71;border:1px solid #2ecc71;padding:2px 6px;border-radius:10px;margin-left:10px;">ORIGIN</span>';
-                else if (isDest) badge = '<span style="font-size:0.7em;color:#f39c12;border:1px solid #f39c12;padding:2px 6px;border-radius:10px;margin-left:10px;">DESTINATION</span>';
+                if (isCurrent) badge = '<span style="font-size:0.7em;color:#2196F3;border:1px solid #2196F3;padding:2px 6px;border-radius:10px;margin-left:10px;">CURRENT POSITION</span>';
+                else if (isOrigin) badge = '<span style="font-size:0.7em;color:#4CAF50;border:1px solid #4CAF50;padding:2px 6px;border-radius:10px;margin-left:10px;">ORIGIN</span>';
+                else if (isDest) badge = '<span style="font-size:0.7em;color:#F44336;border:1px solid #F44336;padding:2px 6px;border-radius:10px;margin-left:10px;">DESTINATION</span>';
                 else if (!isStop) badge = '<span style="font-size:0.6em;color:#8892b0;border:1px solid rgba(136,146,176,0.4);padding:1px 5px;border-radius:10px;margin-left:10px;">TRANSIT</span>';
 
                 const nameStyle = isStop ? 'font-weight:600;' : 'font-weight:400;color:#8892b0;';
-                const itemStyle = isCurrent ? 'border-left:2px solid #e74c3c;' : (!isStop ? 'opacity:0.65;' : '');
+                const itemStyle = isCurrent ? 'border-left:2px solid #2196F3;' : (!isStop ? 'opacity:0.65;' : '');
                 tlist.innerHTML += '<div class="timeline-item" style="' + itemStyle + '"><h4 style="' + nameStyle + '">' + wp.name + ' ' + badge + '</h4><div class="timeline-date">' + wp.time + '</div><p style="color:#8892b0;font-size:0.85rem;">' + (wp.status || 'Location updated') + '</p></div>';
             });
         }
@@ -423,6 +521,34 @@ window.addEventListener('DOMContentLoaded', () => {
             map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 14 });
         }
 
+        // === TWO-COLOR ROUTE LINE ===
+        // Traveled: Origin → Current Position (light blue dashed)
+        // Remaining: Current Position → Destination (gray solid)
+        if (waypoints.length > 1) {
+            const traveledPoints = waypoints.slice(0, cpIdx + 1).map(wp => [wp.lat, wp.lng]);
+            const remainingPoints = waypoints.slice(cpIdx).map(wp => [wp.lat, wp.lng]);
+
+            // Traveled segment: light blue dashed
+            if (traveledPoints.length > 1) {
+                L.polyline(traveledPoints, {
+                    color: '#64B5F6',
+                    weight: 4,
+                    dashArray: '8, 12',
+                    opacity: 0.9
+                }).addTo(map);
+            }
+
+            // Remaining segment: gray solid
+            if (remainingPoints.length > 1) {
+                L.polyline(remainingPoints, {
+                    color: '#78909C',
+                    weight: 4,
+                    opacity: 0.7
+                }).addTo(map);
+            }
+        }
+
+        // === MARKERS ===
         waypoints.forEach((wp, i) => {
             const isStop = wp.stopType === 'stop';
             const isFirst = (i === 0 && isStop);
@@ -473,9 +599,5 @@ window.addEventListener('DOMContentLoaded', () => {
                 offset: [0, -10]
             });
         });
-
-        if (latlngs.length > 1) {
-            L.polyline(latlngs, { color: '#FF9F1C', weight: 4, dashArray: '5, 10' }).addTo(map);
-        }
     }
 });
