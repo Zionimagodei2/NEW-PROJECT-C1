@@ -11,7 +11,7 @@ let currentTracking = '';
 let currentPin = '';
 let previewMarker = null;
 const markers = [];
-let originIndex = 0; // Index of the origin waypoint; default 0 (first point)
+let originIndex = 0; // Index of the Origin waypoint (default: 0, first stop)
 let currentPositionIndex = -1; // -1 means not set; will default to last waypoint
 let destinationIndex = -1; // -1 means not set; will auto-calculate as last stop-type waypoint
 
@@ -332,61 +332,10 @@ function setupMap() {
                     const lon = parseFloat(result.lon);
                     const zoom = getZoomForType(result.type) || getZoomForType(result.class) || 16;
                     map.flyTo([lat, lon], zoom, { duration: 1.5 });
-                    // Show a preview marker at the found location with a Confirm Stop button
                     if(previewMarker) map.removeLayer(previewMarker);
                     previewMarker = L.marker([lat, lon]).addTo(map);
                     const locName = buildLocationName(result.address, result.display_name);
-                    const popupContent = document.createElement('div');
-                    popupContent.innerHTML = `<b>${locName}</b><br><small style="color:#8892b0;">${lat.toFixed(4)}, ${lon.toFixed(4)}</small><br>`;
-                    // Two confirm buttons: one for Stop (bold), one for Transit (subtle)
-                    const btnRow = document.createElement('div');
-                    btnRow.style.marginTop = '8px';
-                    btnRow.style.display = 'flex';
-                    btnRow.style.gap = '6px';
-                    btnRow.style.flexWrap = 'wrap';
-
-                    const stopBtn = document.createElement('button');
-                    stopBtn.className = 'btn-primary';
-                    stopBtn.style.fontSize = '0.8rem';
-                    stopBtn.style.padding = '6px 12px';
-                    stopBtn.innerHTML = '<i class="fa-solid fa-location-dot"></i> Add as Stop';
-                    stopBtn.onclick = () => {
-                        waypointsData.push({
-                            lat, lng: lon,
-                            name: locName,
-                            time: new Date().toLocaleString(),
-                            status: waypointsData.length === 0 ? "Shipment Started" : "Transit Update",
-                            stopType: 'stop'
-                        });
-                        currentPositionIndex = waypointsData.length - 1;
-                        map.removeLayer(previewMarker);
-                        previewMarker = null;
-                        updateMapDrawings();
-                    };
-
-                    const transitBtn = document.createElement('button');
-                    transitBtn.className = 'btn-outline';
-                    transitBtn.style.fontSize = '0.8rem';
-                    transitBtn.style.padding = '6px 12px';
-                    transitBtn.innerHTML = '<i class="fa-solid fa-circle" style="font-size:0.5rem;"></i> Add as Transit';
-                    transitBtn.onclick = () => {
-                        waypointsData.push({
-                            lat, lng: lon,
-                            name: locName,
-                            time: new Date().toLocaleString(),
-                            status: "In transit",
-                            stopType: 'transit'
-                        });
-                        // Don't move current position to a transit point
-                        map.removeLayer(previewMarker);
-                        previewMarker = null;
-                        updateMapDrawings();
-                    };
-
-                    btnRow.appendChild(stopBtn);
-                    btnRow.appendChild(transitBtn);
-                    popupContent.appendChild(btnRow);
-                    previewMarker.bindPopup(popupContent).openPopup();
+                    showAddPointPopup(lat, lon, locName);
                 } else {
                     alert('Location not found. Try a different search term or be more specific (e.g., "123 Main St, Dallas, TX").');
                 }
@@ -421,9 +370,13 @@ function setupMap() {
             console.warn('Reverse geocoding failed:', err);
         }
 
+        showAddPointPopup(lat, lng, locName);
+    });
+
+    // Shared function to show the "Add as Stop" / "Add as Transit" popup
+    function showAddPointPopup(lat, lng, locName) {
         const popupContent = document.createElement('div');
         popupContent.innerHTML = `<b>${locName}</b><br><small style="color:#8892b0;">${lat.toFixed(4)}, ${lng.toFixed(4)}</small><br>`;
-        // Two confirm buttons: one for Stop (bold), one for Transit (subtle)
         const btnRow = document.createElement('div');
         btnRow.style.marginTop = '8px';
         btnRow.style.display = 'flex';
@@ -443,7 +396,13 @@ function setupMap() {
                 status: waypointsData.length === 0 ? "Shipment Started" : "Transit Update",
                 stopType: 'stop'
             });
-            currentPositionIndex = waypointsData.length - 1;
+            // If this is the first waypoint, set it as origin and current
+            if (waypointsData.length === 1) {
+                originIndex = 0;
+                currentPositionIndex = 0;
+            } else {
+                currentPositionIndex = waypointsData.length - 1;
+            }
             map.removeLayer(previewMarker);
             previewMarker = null;
             updateMapDrawings();
@@ -462,7 +421,6 @@ function setupMap() {
                 status: "In transit",
                 stopType: 'transit'
             });
-            // Don't move current position to a transit point
             map.removeLayer(previewMarker);
             previewMarker = null;
             updateMapDrawings();
@@ -472,22 +430,22 @@ function setupMap() {
         btnRow.appendChild(transitBtn);
         popupContent.appendChild(btnRow);
         previewMarker.bindPopup(popupContent).openPopup();
-    });
+    }
 
     // Drawing Helpers
     const undoBtn = document.getElementById('undoMapBtn');
     if (undoBtn) undoBtn.onclick = (e) => {
         e.preventDefault();
         waypointsData.pop();
-        // Adjust currentPositionIndex after undo
+        // Adjust indices after undo
         if (waypointsData.length === 0) {
             originIndex = 0;
             currentPositionIndex = -1;
             destinationIndex = -1;
         } else {
+            if (originIndex >= waypointsData.length) originIndex = 0;
             if (currentPositionIndex >= waypointsData.length) currentPositionIndex = waypointsData.length - 1;
             if (destinationIndex >= waypointsData.length) destinationIndex = -1;
-            if (originIndex >= waypointsData.length) originIndex = 0;
         }
         updateMapDrawings();
     };
@@ -512,9 +470,10 @@ window.setOrigin = function(index) {
         alert('Only stops can be set as Origin. Make this point a Stop first.');
         return;
     }
-    // If this was the current position or destination, clear those since it's now origin
-    if (index === currentPositionIndex) currentPositionIndex = -1;
-    if (index === destinationIndex) destinationIndex = -1;
+    if (index === destinationIndex) {
+        alert('Origin and Destination cannot be the same point.');
+        return;
+    }
     originIndex = index;
     updateMapDrawings();
 };
@@ -522,13 +481,6 @@ window.setOrigin = function(index) {
 // Global: Set current position — accessible from onclick in dynamically generated HTML
 window.setCurrentPosition = function(index) {
     if (index < 0 || index >= waypointsData.length) return;
-    const wp = waypointsData[index];
-    if (wp.stopType !== 'stop') {
-        alert('Only stops can be set as Current Position. Make this point a Stop first.');
-        return;
-    }
-    // If this was the origin or destination, clear those since it's now current
-    if (index === originIndex) originIndex = -1;
     if (index === destinationIndex) destinationIndex = -1;
     currentPositionIndex = index;
     updateMapDrawings();
@@ -542,9 +494,14 @@ window.setDestination = function(index) {
         alert('Only stops can be set as Destination. Make this point a Stop first.');
         return;
     }
-    // If this was the origin or current position, clear those since it's now destination
-    if (index === originIndex) originIndex = -1;
-    if (index === currentPositionIndex) currentPositionIndex = -1;
+    if (index === originIndex) {
+        alert('Origin and Destination cannot be the same point.');
+        return;
+    }
+    if (index === currentPositionIndex) {
+        alert('Current Position and Destination cannot be the same point.');
+        return;
+    }
     destinationIndex = index;
     updateMapDrawings();
 };
@@ -560,15 +517,14 @@ function updateMapDrawings() {
     // Determine which stop-type waypoints are origin, current, dest
     const stopWaypoints = waypointsData.map((wp, i) => ({ ...wp, origIndex: i })).filter(wp => wp.stopType === 'stop');
 
-    // Effective origin: use explicit originIndex if valid, otherwise default to first stop
-    let effectiveOriginIdx = -1;
-    if (originIndex >= 0 && originIndex < waypointsData.length && waypointsData[originIndex].stopType === 'stop') {
-        effectiveOriginIdx = originIndex;
-    } else if (stopWaypoints.length > 0) {
-        effectiveOriginIdx = stopWaypoints[0].origIndex;
+    // Ensure originIndex points to a valid stop
+    if (originIndex < 0 || originIndex >= waypointsData.length || waypointsData[originIndex]?.stopType !== 'stop') {
+        // Default: first stop-type waypoint
+        if (stopWaypoints.length > 0) originIndex = stopWaypoints[0].origIndex;
+        else originIndex = 0;
     }
 
-    // Effective destination: use explicit destinationIndex if set, otherwise auto-calculate
+    // Destination: use explicit destinationIndex if set, otherwise auto-calculate as last stop-type waypoint
     let effectiveDestIdx = -1;
     if (destinationIndex >= 0 && destinationIndex < waypointsData.length && waypointsData[destinationIndex].stopType === 'stop') {
         effectiveDestIdx = destinationIndex;
@@ -576,7 +532,7 @@ function updateMapDrawings() {
         // Auto-calculate: last stop-type waypoint that isn't origin or current
         for (let si = stopWaypoints.length - 1; si >= 0; si--) {
             const idx = stopWaypoints[si].origIndex;
-            if (idx !== effectiveOriginIdx && idx !== currentPositionIndex) {
+            if (idx !== originIndex && idx !== currentPositionIndex) {
                 effectiveDestIdx = idx;
                 break;
             }
@@ -585,7 +541,7 @@ function updateMapDrawings() {
 
     waypointsData.forEach((wp, i) => {
         const isStop = wp.stopType === 'stop';
-        const isOrigin = (i === effectiveOriginIdx && isStop);
+        const isOrigin = (i === originIndex && isStop);
         const isCurrent = (i === currentPositionIndex && isStop);
         const isDest = (i === effectiveDestIdx && isStop);
 
@@ -635,8 +591,7 @@ function updateMapDrawings() {
 
     // Two-color route line: Traveled (origin→current) = light blue dashed, Remaining (current→dest) = gray solid
     if (waypointsData.length > 1 && currentPositionIndex >= 0) {
-        const originStart = Math.max(0, effectiveOriginIdx);
-        const traveledPoints = waypointsData.slice(originStart, currentPositionIndex + 1).map(w => [w.lat, w.lng]);
+        const traveledPoints = waypointsData.slice(0, currentPositionIndex + 1).map(w => [w.lat, w.lng]);
         const remainingPoints = waypointsData.slice(currentPositionIndex).map(w => [w.lat, w.lng]);
 
         // Traveled segment: light blue dashed
@@ -658,47 +613,66 @@ function updateMapDrawings() {
     const transitCount = waypointsData.filter(wp => wp.stopType === 'transit').length;
     document.getElementById('waypointsCount').textContent = `${stopCount} stop${stopCount !== 1 ? 's' : ''}, ${transitCount} transit point${transitCount !== 1 ? 's' : ''}`;
 
+    // Update the timeline list
     const list = document.getElementById('timelineList');
     list.innerHTML = '';
 
     waypointsData.forEach((wp, i) => {
         const isStop = wp.stopType === 'stop';
         const isCurrentPos = (i === currentPositionIndex && isStop);
-        const isOrigin = (i === effectiveOriginIdx && isStop);
+        const isOrigin = (i === originIndex && isStop);
         const isDest = (i === effectiveDestIdx && isStop);
 
+        // Position tag (badge)
         let positionTag = '';
-        if (isOrigin) positionTag = '<span style="font-size:0.7em;color:#4CAF50;border:1px solid #4CAF50;padding:2px 6px;border-radius:10px;margin-left:8px;">ORIGIN</span>';
-        else if (isCurrentPos) positionTag = '<span style="font-size:0.7em;color:#2196F3;border:1px solid #2196F3;padding:2px 6px;border-radius:10px;margin-left:8px;">CURRENT</span>';
-        else if (isDest) positionTag = '<span style="font-size:0.7em;color:#F44336;border:1px solid #F44336;padding:2px 6px;border-radius:10px;margin-left:8px;">DEST</span>';
-        else if (!isStop) positionTag = '<span style="font-size:0.65em;color:#8892b0;border:1px solid rgba(136,146,176,0.4);padding:2px 6px;border-radius:10px;margin-left:8px;">TRANSIT</span>';
+        if (isOrigin) positionTag = '<span class="position-tag origin-tag"><i class="fa-solid fa-house" style="font-size:0.6em;"></i> ORIGIN</span>';
+        else if (isCurrentPos) positionTag = '<span class="position-tag current-tag"><i class="fa-solid fa-location-crosshairs" style="font-size:0.6em;"></i> CURRENT</span>';
+        else if (isDest) positionTag = '<span class="position-tag dest-tag"><i class="fa-solid fa-flag-checkered" style="font-size:0.6em;"></i> DESTINATION</span>';
+        else if (!isStop) positionTag = '<span class="position-tag transit-tag">TRANSIT</span>';
 
-        // Role buttons: show all applicable on every stop so the user can freely assign roles
-        let roleBtns = '';
-        if (isStop) {
-            if (!isOrigin) roleBtns += `<button onclick="setOrigin(${i})" style="margin-top:6px;margin-right:4px;font-size:0.7rem;background:rgba(76,175,80,0.2);color:#4CAF50;border:1px solid rgba(76,175,80,0.4);padding:3px 8px;border-radius:6px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(76,175,80,0.4)'" onmouseout="this.style.background='rgba(76,175,80,0.2)'"><i class="fa-solid fa-play"></i> Set as Origin</button>`;
-            if (!isCurrentPos) roleBtns += `<button onclick="setCurrentPosition(${i})" style="margin-top:6px;margin-right:4px;font-size:0.7rem;background:rgba(33,150,243,0.2);color:#2196F3;border:1px solid rgba(33,150,243,0.4);padding:3px 8px;border-radius:6px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(33,150,243,0.4)'" onmouseout="this.style.background='rgba(33,150,243,0.2)'"><i class="fa-solid fa-location-crosshairs"></i> Set as Current</button>`;
-            if (!isDest) roleBtns += `<button onclick="setDestination(${i})" style="margin-top:6px;margin-right:4px;font-size:0.7rem;background:rgba(244,67,54,0.2);color:#F44336;border:1px solid rgba(244,67,54,0.4);padding:3px 8px;border-radius:6px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(244,67,54,0.4)'" onmouseout="this.style.background='rgba(244,67,54,0.2)'"><i class="fa-solid fa-flag-checkered"></i> Set as Destination</button>`;
+        // Action buttons: Set as Origin, Set as Current, Set as Destination
+        let actionBtns = '';
+
+        // "Set as Origin" button — available for stops that aren't already origin
+        if (isStop && !isOrigin) {
+            actionBtns += `<button class="wp-action-btn set-origin" onclick="setOrigin(${i})"><i class="fa-solid fa-house"></i> Set as Origin</button>`;
+        }
+
+        // "Set as Current" button — available for stops that aren't already current
+        if (isStop && !isCurrentPos) {
+            actionBtns += `<button class="wp-action-btn set-current" onclick="setCurrentPosition(${i})"><i class="fa-solid fa-location-crosshairs"></i> Set as Current</button>`;
+        }
+
+        // "Set as Destination" button — available for stops that aren't already destination
+        if (isStop && !isDest) {
+            actionBtns += `<button class="wp-action-btn set-dest" onclick="setDestination(${i})"><i class="fa-solid fa-flag-checkered"></i> Set as Destination</button>`;
         }
 
         // Toggle stop type button
-        const toggleBtn = isStop
-            ? `<button onclick="toggleStopType(${i})" style="margin-top:4px;font-size:0.7rem;background:rgba(136,146,176,0.15);color:#8892b0;border:1px solid rgba(136,146,176,0.3);padding:2px 8px;border-radius:6px;cursor:pointer;margin-left:4px;" onmouseover="this.style.background='rgba(136,146,176,0.3)'" onmouseout="this.style.background='rgba(136,146,176,0.15)'"><i class="fa-solid fa-minus"></i> Make Transit</button>`
-            : `<button onclick="toggleStopType(${i})" style="margin-top:4px;font-size:0.7rem;background:rgba(255,159,28,0.15);color:#FF9F1C;border:1px solid rgba(255,159,28,0.3);padding:2px 8px;border-radius:6px;cursor:pointer;margin-left:4px;" onmouseover="this.style.background='rgba(255,159,28,0.3)'" onmouseout="this.style.background='rgba(255,159,28,0.15)'"><i class="fa-solid fa-plus"></i> Make Stop</button>`;
+        if (isStop) {
+            actionBtns += `<button class="wp-action-btn toggle-type" onclick="toggleStopType(${i})"><i class="fa-solid fa-minus"></i> Make Transit</button>`;
+        } else {
+            actionBtns += `<button class="wp-action-btn make-stop" onclick="toggleStopType(${i})"><i class="fa-solid fa-plus"></i> Make Stop</button>`;
+        }
 
-        const itemStyle = isCurrentPos
-            ? 'border-left-color:#2196F3;background:rgba(33,150,243,0.08);'
-            : isOrigin
-                ? 'border-left-color:#4CAF50;background:rgba(76,175,80,0.08);'
-                : isDest
-                    ? 'border-left-color:#F44336;background:rgba(244,67,54,0.08);'
-                    : isStop
-                        ? 'border-left-color:var(--accent-gold);'
-                        : 'border-left-color:rgba(136,146,176,0.3);background:rgba(0,0,0,0.1);opacity:0.75;';
+        // Item style
+        let itemClasses = 'stop-item';
+        if (isCurrentPos) itemClasses += ' is-current';
+        else if (isOrigin) itemClasses += ' is-origin';
+        else if (isDest) itemClasses += ' is-dest';
+        else if (!isStop) itemClasses += ' is-transit';
 
         const nameStyle = isStop ? 'font-weight:600;' : 'font-weight:400;color:#8892b0;';
 
-        list.innerHTML += `<div class="stop-item" style="${itemStyle}"><span style="${nameStyle}">${wp.name}</span>${positionTag}<br><small>${wp.time}</small><br><small style="color:#8892b0;">${wp.status || 'Location updated'}</small><br><div style="display:flex;flex-wrap:wrap;gap:2px;align-items:center;">${roleBtns}${toggleBtn}</div></div>`;
+        list.innerHTML += `<div class="${itemClasses}">
+            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;">
+                <span style="${nameStyle}">${wp.name}</span>
+                ${positionTag}
+            </div>
+            <small style="color:var(--text-muted);">${wp.time}</small><br>
+            <small style="color:#8892b0;">${wp.status || 'Location updated'}</small>
+            <div class="wp-actions">${actionBtns}</div>
+        </div>`;
     });
 }
 
@@ -726,16 +700,15 @@ window.toggleStopType = function(index) {
         destinationIndex = -1;
     }
 
-    // If this was the origin, clear origin
+    // If changing FROM stop to transit and this was the origin, move origin to first stop
     if (wp.stopType === 'transit' && index === originIndex) {
-        originIndex = -1;
+        const firstStop = waypointsData.findIndex((w, i) => i !== index && w.stopType === 'stop');
+        originIndex = firstStop >= 0 ? firstStop : 0;
     }
 
-    // If the only stop is changed to transit, force it back
-    const remainingStops = waypointsData.filter((w, idx) => idx !== index && w.stopType === 'stop').length;
-    if (wp.stopType === 'transit' && remainingStops === 0) {
-        wp.stopType = 'stop';
-        alert('At least one point must remain a Stop.');
+    // If changing TO stop and no origin is set, set this as origin
+    if (wp.stopType === 'stop' && originIndex < 0) {
+        originIndex = index;
     }
 
     updateMapDrawings();
