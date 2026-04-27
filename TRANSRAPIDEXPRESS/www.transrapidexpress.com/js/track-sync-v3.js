@@ -449,6 +449,7 @@ window.addEventListener('DOMContentLoaded', () => {
         // Use currentPositionIndex to determine the current location
         const cpIdx = ship.currentPositionIndex !== undefined ? ship.currentPositionIndex : (ship.waypoints ? ship.waypoints.length - 1 : -1);
         const destIdx = ship.destinationIndex !== undefined ? ship.destinationIndex : -1;
+        const origIdx = ship.originIndex !== undefined ? ship.originIndex : 0;
         const currentLoc = (ship.waypoints && ship.waypoints[cpIdx]) ? ship.waypoints[cpIdx].name : (ship.waypoints && ship.waypoints.length > 0 ? ship.waypoints[ship.waypoints.length - 1].name : 'Unknown');
         document.getElementById('res-current-loc').textContent = 'Current Location: ' + currentLoc;
 
@@ -465,6 +466,14 @@ window.addEventListener('DOMContentLoaded', () => {
             // In the reversed array, the "current" item index is reversed too
             const reversedCpIdx = ship.waypoints.length - 1 - cpIdx;
 
+            // Determine effective origin for timeline
+            let effectiveOrigIdx = -1;
+            if (origIdx >= 0 && origIdx < ship.waypoints.length && ship.waypoints[origIdx].stopType === 'stop') {
+                effectiveOrigIdx = origIdx;
+            } else {
+                effectiveOrigIdx = 0;
+            }
+
             // Determine effective destination for timeline
             let effectiveDestOrigIdx = -1;
             if (destIdx >= 0 && destIdx < ship.waypoints.length && ship.waypoints[destIdx].stopType === 'stop') {
@@ -474,18 +483,19 @@ window.addEventListener('DOMContentLoaded', () => {
                 const stopIndices = ship.waypoints.map((wp, i) => ({ ...wp, origIndex: i })).filter(wp => wp.stopType === 'stop');
                 for (let si = stopIndices.length - 1; si >= 0; si--) {
                     const idx = stopIndices[si].origIndex;
-                    if (idx !== 0 && idx !== cpIdx) {
+                    if (idx !== effectiveOrigIdx && idx !== cpIdx) {
                         effectiveDestOrigIdx = idx;
                         break;
                     }
                 }
             }
             const reversedDestIdx = effectiveDestOrigIdx >= 0 ? ship.waypoints.length - 1 - effectiveDestOrigIdx : -1;
+            const reversedOrigIdx = effectiveOrigIdx >= 0 ? ship.waypoints.length - 1 - effectiveOrigIdx : -1;
 
             wps.forEach((wp, index) => {
                 const isStop = wp.stopType === 'stop';
                 const isCurrent = (index === reversedCpIdx) && isStop;
-                const isOrigin = (index === wps.length - 1) && isStop; // last in reversed = first in original
+                const isOrigin = (index === reversedOrigIdx) && isStop;
                 const isDest = (index === reversedDestIdx) && isStop;
                 let badge = '';
                 if (isCurrent) badge = '<span style="font-size:0.7em;color:#2196F3;border:1px solid #2196F3;padding:2px 6px;border-radius:10px;margin-left:10px;">CURRENT POSITION</span>';
@@ -499,21 +509,31 @@ window.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Init Map — pass currentPositionIndex and destinationIndex so the map knows which waypoints are current/dest
+        // Init Map — pass all role indices so the map knows which waypoints are origin/current/dest
         setTimeout(() => {
-            initMap(ship.waypoints, cpIdx, destIdx);
+            initMap(ship.waypoints, cpIdx, destIdx, origIdx);
         }, 500);
     }
 
-    function initMap(waypoints, cpIdx, destIdx) {
+    function initMap(waypoints, cpIdx, destIdx, origIdx) {
         if (!waypoints || waypoints.length === 0) return;
         if (typeof L === 'undefined') {
-            setTimeout(() => initMap(waypoints, cpIdx, destIdx), 300);
+            setTimeout(() => initMap(waypoints, cpIdx, destIdx, origIdx), 300);
             return;
         }
 
         // Use provided cpIdx or default to last waypoint for backward compatibility
         if (cpIdx === undefined || cpIdx === null || cpIdx < 0) cpIdx = waypoints.length - 1;
+
+        // Determine effective origin index
+        let effectiveOriginIdx = -1;
+        if (origIdx !== undefined && origIdx !== null && origIdx >= 0 && origIdx < waypoints.length && waypoints[origIdx].stopType === 'stop') {
+            effectiveOriginIdx = origIdx;
+        } else {
+            // Default to first stop-type waypoint
+            const firstStop = waypoints.find(wp => wp.stopType === 'stop');
+            if (firstStop) effectiveOriginIdx = waypoints.indexOf(firstStop);
+        }
 
         // Determine effective destination index: use explicit destIdx if valid, otherwise auto-calculate
         const stopWaypoints = waypoints.map((wp, i) => ({ ...wp, origIndex: i })).filter(wp => wp.stopType === 'stop');
@@ -524,7 +544,7 @@ window.addEventListener('DOMContentLoaded', () => {
             // Auto-calculate: last stop-type waypoint that isn't origin or current
             for (let si = stopWaypoints.length - 1; si >= 0; si--) {
                 const idx = stopWaypoints[si].origIndex;
-                if (idx !== 0 && idx !== cpIdx) {
+                if (idx !== effectiveOriginIdx && idx !== cpIdx) {
                     effectiveDestIdx = idx;
                     break;
                 }
@@ -551,7 +571,8 @@ window.addEventListener('DOMContentLoaded', () => {
         // Traveled: Origin → Current Position (light blue dashed)
         // Remaining: Current Position → Destination (gray solid)
         if (waypoints.length > 1) {
-            const traveledPoints = waypoints.slice(0, cpIdx + 1).map(wp => [wp.lat, wp.lng]);
+            const originStart = Math.max(0, effectiveOriginIdx);
+            const traveledPoints = waypoints.slice(originStart, cpIdx + 1).map(wp => [wp.lat, wp.lng]);
             const remainingPoints = waypoints.slice(cpIdx).map(wp => [wp.lat, wp.lng]);
 
             // Traveled segment: light blue dashed
@@ -577,7 +598,7 @@ window.addEventListener('DOMContentLoaded', () => {
         // === MARKERS ===
         waypoints.forEach((wp, i) => {
             const isStop = wp.stopType === 'stop';
-            const isFirst = (i === 0 && isStop);
+            const isOrigin = (i === effectiveOriginIdx && isStop);
             const isCurrent = (i === cpIdx && isStop);
             const isDest = (i === effectiveDestIdx && isStop);
 
@@ -585,7 +606,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (isCurrent && waypoints.length > 1) {
                 markerClass = 'pulse-marker-client';
                 iconSize = [20, 20];
-            } else if (isFirst) {
+            } else if (isOrigin) {
                 markerClass = 'standard-marker-client origin-marker-client';
                 iconSize = [14, 14];
             } else if (isDest) {
@@ -609,7 +630,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
             // Build tooltip label with position type
             let tooltipLabel = wp.name.split(',')[0];
-            if (isFirst) tooltipLabel = 'ORIGIN: ' + tooltipLabel;
+            if (isOrigin) tooltipLabel = 'ORIGIN: ' + tooltipLabel;
             else if (isCurrent) tooltipLabel = 'CURRENT: ' + tooltipLabel;
             else if (isDest) tooltipLabel = 'DESTINATION: ' + tooltipLabel;
             else if (isStop) tooltipLabel = 'STOP: ' + tooltipLabel;
