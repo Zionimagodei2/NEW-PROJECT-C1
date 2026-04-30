@@ -250,7 +250,6 @@ tbody tr:hover { background: rgba(217, 119, 6, 0.03); }
     border: 3px solid white;
     box-shadow: 0 0 10px rgba(37, 99, 235, 0.6);
     position: relative;
-    transform: translate(-50%, -50%);
 }
 .pulse-marker::before {
     content: '';
@@ -270,7 +269,6 @@ tbody tr:hover { background: rgba(217, 119, 6, 0.03); }
     width: 14px; height: 14px;
     border: 2px solid white;
     box-shadow: 0 0 5px rgba(0,0,0,0.2);
-    transform: translate(-50%, -50%);
 }
 .origin-marker { background: #059669; border-color: white; box-shadow: 0 0 8px rgba(5,150,105,0.5); }
 .dest-marker { background: #DC2626; border-color: white; box-shadow: 0 0 8px rgba(220,38,38,0.5); }
@@ -280,7 +278,6 @@ tbody tr:hover { background: rgba(217, 119, 6, 0.03); }
     border-radius: 50%;
     width: 8px; height: 8px;
     border: 1px solid rgba(0,0,0,0.15);
-    transform: translate(-50%, -50%);
 }
 .transit-label {
     background: rgba(255, 255, 255, 0.9) !important;
@@ -343,14 +340,29 @@ tbody tr:hover { background: rgba(217, 119, 6, 0.03); }
     backdrop-filter: blur(8px);
     border: 1px solid rgba(217, 119, 6, 0.4);
     color: var(--text-main);
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-size: 0.75rem;
+    font-weight: 700;
     font-family: var(--font-primary);
-    padding: 4px 10px;
-    border-radius: 12px;
+    padding: 5px 12px;
+    border-radius: 14px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    white-space: nowrap;
+    letter-spacing: 0.3px;
 }
 .sophisticated-label::before { display: none; /* override leaflet arrow */ }
+/* Color-coded labels for key markers on admin map */
+.label-origin {
+    border-color: #059669 !important;
+    box-shadow: 0 4px 16px rgba(5, 150, 105, 0.15);
+}
+.label-current {
+    border-color: #2563EB !important;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15);
+}
+.label-dest {
+    border-color: #DC2626 !important;
+    box-shadow: 0 4px 16px rgba(220, 38, 38, 0.15);
+}
 
 .map-search { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
 .map-search input { padding: 0.5rem 1rem; background: #F0F2F7; border: 1px solid var(--panel-border); color: var(--text-main); }

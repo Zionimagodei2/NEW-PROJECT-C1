@@ -65,7 +65,7 @@ if (isTrackPage) {
         .pulse-marker-client {
             background: #2196F3; border-radius: 50%; width: 20px; height: 20px;
             border: 3px solid white; box-shadow: 0 0 10px rgba(33, 150, 243, 0.8);
-            position: relative; transform: translate(-50%, -50%);
+            position: relative;
         }
         .pulse-marker-client::before {
             content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px;
@@ -76,14 +76,14 @@ if (isTrackPage) {
 
         .standard-marker-client {
             background: #3498db; border-radius: 50%; width: 14px; height: 14px;
-            border: 2px solid white; transform: translate(-50%, -50%);
+            border: 2px solid white;
         }
         .origin-marker-client { background: #4CAF50; border-color: white; box-shadow: 0 0 8px rgba(76,175,80,0.6); }
         .dest-marker-client { background: #F44336; border-color: white; box-shadow: 0 0 8px rgba(244,67,54,0.6); }
         .stop-marker-client { background: #2196F3; border-color: white; box-shadow: 0 0 5px rgba(33,150,243,0.5); }
         .transit-marker-client {
             background: rgba(136, 146, 176, 0.5); border-radius: 50%; width: 8px; height: 8px;
-            border: 1px solid rgba(255,255,255,0.3); transform: translate(-50%, -50%);
+            border: 1px solid rgba(255,255,255,0.3);
         }
         .transit-label-client {
             background: rgba(10, 22, 40, 0.6) !important;
@@ -94,18 +94,33 @@ if (isTrackPage) {
         }
 
         .sophisticated-label {
-            background: rgba(10, 22, 40, 0.85);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 159, 28, 0.5);
+            background: rgba(10, 22, 40, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 159, 28, 0.6);
             color: #fff;
-            font-size: 0.8rem;
-            font-weight: 600;
+            font-size: 0.75rem;
+            font-weight: 700;
             font-family: inherit;
-            padding: 4px 10px;
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            padding: 5px 12px;
+            border-radius: 14px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            white-space: nowrap;
+            letter-spacing: 0.3px;
         }
         .sophisticated-label::before { display: none; }
+        /* Color-coded labels for key markers */
+        .label-origin {
+            border-color: #4CAF50 !important;
+            box-shadow: 0 4px 20px rgba(76, 175, 80, 0.3);
+        }
+        .label-current {
+            border-color: #2196F3 !important;
+            box-shadow: 0 4px 20px rgba(33, 150, 243, 0.3);
+        }
+        .label-dest {
+            border-color: #F44336 !important;
+            box-shadow: 0 4px 20px rgba(244, 67, 54, 0.3);
+        }
 
         /* Map Legend */
         .map-legend {
@@ -544,7 +559,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // Fit bounds to show all waypoints with generous padding so all 3 key points are clearly visible
         if (latlngs.length > 1) {
-            trackMap.fitBounds(L.latLngBounds(latlngs), { padding: [50, 50], maxZoom: 13 });
+            trackMap.fitBounds(L.latLngBounds(latlngs), { padding: [60, 60], maxZoom: 14 });
         }
 
         // === TWO-COLOR ROUTE LINE ===
@@ -554,24 +569,25 @@ window.addEventListener('DOMContentLoaded', () => {
             const traveledPoints = waypoints.slice(0, cpIdx + 1).map(wp => [wp.lat, wp.lng]);
             const remainingPoints = waypoints.slice(cpIdx).map(wp => [wp.lat, wp.lng]);
 
-            // Traveled segment: light blue dashed
+            // Traveled segment: light blue dashed — more broken pattern
             if (traveledPoints.length > 1) {
                 L.polyline(traveledPoints, {
                     color: '#3B82F6',
-                    weight: 2,
-                    dashArray: '8, 12',
-                    opacity: 0.85,
+                    weight: 1.5,
+                    dashArray: '4, 8',
+                    opacity: 0.9,
                     lineCap: 'round',
                     lineJoin: 'round'
                 }).addTo(trackMap);
             }
 
-            // Remaining segment: gray solid
+            // Remaining segment: gray dotted
             if (remainingPoints.length > 1) {
                 L.polyline(remainingPoints, {
                     color: '#78909C',
-                    weight: 2,
-                    opacity: 0.65,
+                    weight: 1.5,
+                    dashArray: '3, 7',
+                    opacity: 0.7,
                     lineCap: 'round',
                     lineJoin: 'round'
                 }).addTo(trackMap);
@@ -613,13 +629,22 @@ window.addEventListener('DOMContentLoaded', () => {
 
             // Build tooltip label with position type
             let tooltipLabel = wp.name.split(',')[0];
-            if (isFirst) tooltipLabel = 'ORIGIN: ' + tooltipLabel;
-            else if (isCurrent) tooltipLabel = 'CURRENT: ' + tooltipLabel;
-            else if (isDest) tooltipLabel = 'DESTINATION: ' + tooltipLabel;
-            else if (isStop) tooltipLabel = 'STOP: ' + tooltipLabel;
-            // Transit points just show the name
-
-            const tooltipClass = isStop ? 'sophisticated-label' : 'sophisticated-label transit-label-client';
+            let tooltipClass = 'sophisticated-label';
+            if (isFirst) {
+                tooltipLabel = 'ORIGIN: ' + tooltipLabel;
+                tooltipClass += ' label-origin';
+            } else if (isCurrent) {
+                tooltipLabel = 'CURRENT: ' + tooltipLabel;
+                tooltipClass += ' label-current';
+            } else if (isDest) {
+                tooltipLabel = 'DESTINATION: ' + tooltipLabel;
+                tooltipClass += ' label-dest';
+            } else if (isStop) {
+                tooltipLabel = 'STOP: ' + tooltipLabel;
+            } else {
+                // Transit points just show the name
+                tooltipClass += ' transit-label-client';
+            }
 
             const m = L.marker([wp.lat, wp.lng], { icon: customIcon }).addTo(trackMap);
             // Make key markers (origin, current, dest) always visible with permanent tooltips

@@ -619,13 +619,22 @@ function updateMapDrawings() {
 
         // Only show tooltip for stops; transit points get a minimal label on hover
         let tooltipLabel = label;
-        if (isOrigin) tooltipLabel = 'ORIGIN: ' + label;
-        else if (isCurrent) tooltipLabel = 'CURRENT: ' + label;
-        else if (isDest) tooltipLabel = 'DESTINATION: ' + label;
-        else if (isStop) tooltipLabel = 'STOP: ' + label;
-        else tooltipLabel = label; // transit
-
-        const tooltipClass = isStop ? 'sophisticated-label' : 'sophisticated-label transit-label';
+        let tooltipClass = 'sophisticated-label';
+        if (isOrigin) {
+            tooltipLabel = 'ORIGIN: ' + label;
+            tooltipClass += ' label-origin';
+        } else if (isCurrent) {
+            tooltipLabel = 'CURRENT: ' + label;
+            tooltipClass += ' label-current';
+        } else if (isDest) {
+            tooltipLabel = 'DESTINATION: ' + label;
+            tooltipClass += ' label-dest';
+        } else if (isStop) {
+            tooltipLabel = 'STOP: ' + label;
+        } else {
+            tooltipLabel = label; // transit
+            tooltipClass += ' transit-label';
+        }
         m.bindTooltip(tooltipLabel, { direction: 'top', className: tooltipClass, offset: [0,-10] });
         markers.push(m);
     });
@@ -635,18 +644,18 @@ function updateMapDrawings() {
         const traveledPoints = waypointsData.slice(0, currentPositionIndex + 1).map(w => [w.lat, w.lng]);
         const remainingPoints = waypointsData.slice(currentPositionIndex).map(w => [w.lat, w.lng]);
 
-        // Traveled segment: light blue dashed
+        // Traveled segment: light blue dashed — more broken pattern
         if (traveledPoints.length > 1) {
-            const traveledLine = L.polyline(traveledPoints, { color: '#3B82F6', weight: 2, dashArray: '8, 12', opacity: 0.85, lineCap: 'round', lineJoin: 'round' }).addTo(map);
+            const traveledLine = L.polyline(traveledPoints, { color: '#3B82F6', weight: 1.5, dashArray: '4, 8', opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
             routePolylines.push(traveledLine);
         }
-        // Remaining segment: gray solid
+        // Remaining segment: gray dotted
         if (remainingPoints.length > 1) {
-            const remainingLine = L.polyline(remainingPoints, { color: '#78909C', weight: 2, opacity: 0.65, lineCap: 'round', lineJoin: 'round' }).addTo(map);
+            const remainingLine = L.polyline(remainingPoints, { color: '#78909C', weight: 1.5, dashArray: '3, 7', opacity: 0.7, lineCap: 'round', lineJoin: 'round' }).addTo(map);
             routePolylines.push(remainingLine);
         }
     } else if (waypointsData.length > 1) {
-        const defaultLine = L.polyline(waypointsData.map(w => [w.lat, w.lng]), {color: '#3B82F6', weight: 2, dashArray: '8, 12', lineCap: 'round', lineJoin: 'round'}).addTo(map);
+        const defaultLine = L.polyline(waypointsData.map(w => [w.lat, w.lng]), {color: '#3B82F6', weight: 1.5, dashArray: '4, 8', lineCap: 'round', lineJoin: 'round'}).addTo(map);
         routePolylines.push(defaultLine);
     }
 
