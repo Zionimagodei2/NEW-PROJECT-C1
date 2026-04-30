@@ -609,7 +609,9 @@ function setupMap() {
                     } catch(e) { continue; }
                 }
 
-                const data = allResults;
+                // Reuse the data variable declared above — just assign allResults
+                // (was 'const data = allResults' which caused SyntaxError: duplicate declaration)
+                data = allResults;
 
                 if (data && data.length > 0) {
                     // Show dropdown for multiple results
