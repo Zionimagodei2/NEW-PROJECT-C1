@@ -375,6 +375,18 @@
 
   // ─── 4. THEME SWITCHER ───
   function initThemeSwitcher() {
+    // Force light theme by default
+    var savedTheme = localStorage.getItem('theme');
+    if (!savedTheme || savedTheme === 'system') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+      document.documentElement.style.colorScheme = 'light';
+      localStorage.setItem('theme', 'light');
+    } else if (savedTheme === 'light') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+      document.documentElement.style.colorScheme = 'light';
+    }
     const themeButtons = document.querySelectorAll('button[type="button"]');
     
     themeButtons.forEach(btn => {

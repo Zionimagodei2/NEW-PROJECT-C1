@@ -29,37 +29,37 @@ if (isTrackPage) {
             max-width: 800px;
             margin: 2rem auto;
             padding: 0 1rem;
-            color: white;
+            color: #1A1D26;
             display: none;
         }
         .track-result-container.active {
             display: block;
         }
         .result-header {
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(0,0,0,0.08);
             padding-bottom: 1.5rem;
             margin-bottom: 1.5rem;
         }
         .status-card {
-            background: rgba(255,255,255,0.05);
+            background: rgba(0,0,0,0.02);
             padding: 1.5rem;
             border-radius: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border: 1px solid rgba(255,159,28,0.3);
+            border: 1px solid rgba(217,119,6,0.3);
         }
         .status-badge { color: #FF9F1C; font-weight: bold; font-size: 1.25rem; }
         .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
         .info-group { margin-bottom: 1rem; }
-        .info-label { color: #8892b0; font-size: 0.85rem; display: block; margin-bottom: 0.2rem; }
+        .info-label { color: #64748b; font-size: 0.85rem; display: block; margin-bottom: 0.2rem; }
         .info-val { font-weight: 500; }
-        .map-container { height: 400px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin-top: 1rem; }
-        .timeline { margin-top: 2rem; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 1.5rem; }
+        .map-container { height: 400px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(0,0,0,0.08); margin-top: 1rem; }
+        .timeline { margin-top: 2rem; border-left: 2px solid rgba(0,0,0,0.1); padding-left: 1.5rem; }
         .timeline-item { position: relative; margin-bottom: 2rem; }
         .timeline-item::before { content: ''; position: absolute; left: -1.8rem; top: 0; width: 12px; height: 12px; border-radius: 50%; background: #FF9F1C; }
         .timeline-item h4 { color: #FF9F1C; margin-bottom: 0.2rem; }
-        .timeline-date { font-size: 0.8rem; color: #8892b0; margin-bottom: 0.5rem; }
+        .timeline-date { font-size: 0.8rem; color: #64748b; margin-bottom: 0.5rem; }
 
         /* Marker Styles — matching predecessor site */
         .pulse-marker-client {
@@ -86,24 +86,24 @@ if (isTrackPage) {
             border: 1px solid rgba(255,255,255,0.3); transform: translate(-50%, -50%);
         }
         .transit-label-client {
-            background: rgba(10, 22, 40, 0.6) !important;
-            border: 1px solid rgba(136, 146, 176, 0.3) !important;
+            background: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid rgba(0, 0, 0, 0.1) !important;
             font-size: 0.7rem !important;
             font-weight: 400 !important;
-            color: #8892b0 !important;
+            color: #546E7A !important;
         }
 
         .sophisticated-label {
-            background: rgba(10, 22, 40, 0.85);
+            background: rgba(255, 255, 255, 0.95) !important;
             backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 159, 28, 0.5);
-            color: #fff;
+            border: 1px solid rgba(0, 0, 0, 0.12) !important;
+            color: #1A1D26 !important;
             font-size: 0.8rem;
             font-weight: 600;
             font-family: inherit;
             padding: 4px 10px;
             border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
         .sophisticated-label::before { display: none; }
 
@@ -122,7 +122,7 @@ if (isTrackPage) {
             gap: 6px;
             font-size: 0.85rem;
             font-weight: 600;
-            color: #fff;
+            color: #1A1D26;
         }
         .map-legend-dot {
             width: 10px;
@@ -147,7 +147,7 @@ if (isTrackPage) {
             align-items: center;
             gap: 6px;
             font-size: 0.75rem;
-            color: #94a3b8;
+            color: #64748b;
         }
         .route-legend-line {
             width: 24px;
@@ -189,16 +189,16 @@ if (isTrackPage) {
             gap: 8px;
             margin-bottom: 1.5rem;
             padding: 8px 16px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: white;
+            background: rgba(0,0,0,0.04);
+            border: 1px solid rgba(0,0,0,0.1);
+            color: #1A1D26;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
             font-size: 0.85rem;
             transition: background 0.2s;
         }
-        .track-back-btn:hover { background: rgba(255,255,255,0.2); }
+        .track-back-btn:hover { background: rgba(0,0,0,0.08); }
 
         @media (max-width: 768px) {
             .details-grid { grid-template-columns: 1fr; gap: 1rem; }
@@ -236,8 +236,8 @@ window.addEventListener('DOMContentLoaded', () => {
             <span>Shipment found. Live tracking loaded.</span>
         </div>
         <div class="result-header">
-            <h2 style="color: #ffffff; font-size: 1.5rem; font-weight: bold;">SHIPMENT DETAILS</h2>
-            <p style="color: #94a3b8;">Tracking Code: <strong style="color: #FF9F1C;" id="res-code">--</strong></p>
+            <h2 style="color: #1A1D26; font-size: 1.5rem; font-weight: bold;">SHIPMENT DETAILS</h2>
+            <p style="color: #64748b;">Tracking Code: <strong style="color: #d97706;" id="res-code">--</strong></p>
         </div>
         <div class="status-card">
             <div>
@@ -249,7 +249,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 <div class="info-val" id="res-date">--</div>
             </div>
         </div>
-        <h3 style="margin: 2rem 0 1rem; color: #ffffff;">PRODUCT INFORMATION</h3>
+        <h3 style="margin: 2rem 0 1rem; color: #1A1D26;">PRODUCT INFORMATION</h3>
         <div class="details-grid">
             <div>
                 <div class="info-group"><span class="info-label">Name</span><span class="info-val" id="res-name">--</span></div>
@@ -265,7 +265,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 <div class="info-group"><span class="info-label">Agency</span><span class="info-val" id="res-agency">--</span></div>
             </div>
         </div>
-        <h3 style="margin: 2rem 0 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">RECEIVER <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></h3>
+        <h3 style="margin: 2rem 0 1rem; color: #1A1D26; display: flex; align-items: center; gap: 8px;">RECEIVER <svg width="18" height="18" fill="none" stroke="#d97706" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></h3>
         <div class="details-grid">
             <div>
                 <div class="info-group"><span class="info-label">Name</span><span class="info-val" id="res-receiver-name">--</span></div>
@@ -275,7 +275,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 <div class="info-group"><span class="info-label">Email</span><span class="info-val" id="res-receiver-email">--</span></div>
             </div>
         </div>
-        <h3 style="margin: 2rem 0 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">SENDER <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></h3>
+        <h3 style="margin: 2rem 0 1rem; color: #1A1D26; display: flex; align-items: center; gap: 8px;">SENDER <svg width="18" height="18" fill="none" stroke="#d97706" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></h3>
         <div class="details-grid">
             <div>
                 <div class="info-group"><span class="info-label">Name</span><span class="info-val" id="res-sender-name">--</span></div>
@@ -285,7 +285,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 <div class="info-group"><span class="info-label">Phone</span><span class="info-val" id="res-sender-phone">--</span></div>
             </div>
         </div>
-        <h3 style="margin: 2rem 0 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">KEY DATES <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></h3>
+        <h3 style="margin: 2rem 0 1rem; color: #1A1D26; display: flex; align-items: center; gap: 8px;">KEY DATES <svg width="18" height="18" fill="none" stroke="#d97706" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></h3>
         <div class="details-grid">
             <div>
                 <div class="info-group"><span class="info-label">Shipped On</span><span class="info-val" id="res-shipped-on">--</span></div>
@@ -294,7 +294,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 <div class="info-group"><span class="info-label">Last Updated</span><span class="info-val" id="res-last-updated">--</span></div>
             </div>
         </div>
-        <h3 style="margin: 1.5rem 0 0.5rem; color: #ffffff;">LIVE SHIPMENT MAP</h3>
+        <h3 style="margin: 1.5rem 0 0.5rem; color: #1A1D26;">LIVE SHIPMENT MAP</h3>
         <div class="map-legend">
             <div class="map-legend-item"><span class="map-legend-dot origin"></span> ORIGIN</div>
             <div class="map-legend-item"><span class="map-legend-dot current"></span> CURRENT</div>
@@ -304,10 +304,10 @@ window.addEventListener('DOMContentLoaded', () => {
             <div class="route-legend-item"><span class="route-legend-line traveled"></span> Traveled</div>
             <div class="route-legend-item"><span class="route-legend-line remaining"></span> Remaining</div>
         </div>
-        <p style="color: #8892b0; font-size: 0.9rem;" id="res-current-loc">Current Location: --</p>
+        <p style="color: #64748b; font-size: 0.9rem;" id="res-current-loc">Current Location: --</p>
         <div id="track-map" class="map-container"></div>
-        <h3 style="margin: 2rem 0 0.5rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">
-            <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <h3 style="margin: 2rem 0 0.5rem; color: #1A1D26; display: flex; align-items: center; gap: 8px;">
+            <svg width="18" height="18" fill="none" stroke="#d97706" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
             LOCATION HISTORY
             <span id="res-stop-count" style="font-size:0.75rem;color:#94a3b8;font-weight:400;margin-left:8px;"></span>
         </h3>
@@ -537,7 +537,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // Center the map on the current position
         const center = [waypoints[cpIdx].lat, waypoints[cpIdx].lng];
-        const map = L.map('track-map').setView(center, 6);
+        const map = L.map('track-map').setView(center, 12);
         // Use CARTO Voyager for detailed, clean mapping
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
@@ -548,7 +548,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // Fit bounds to show all waypoints
         if (latlngs.length > 1) {
-            map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 14 });
+            map.fitBounds(L.latLngBounds(latlngs), { padding: [50, 50], maxZoom: 13 });
         }
 
         // === TWO-COLOR ROUTE LINE ===

@@ -299,7 +299,7 @@ function setupMap() {
     const mapContainer = document.getElementById('adminMap');
     if (!mapContainer) return;
 
-    map = L.map('adminMap').setView([39.8283, -98.5795], 4);
+    map = L.map('adminMap').setView([39.8283, -98.5795], 12);
     // Use CARTO Voyager tiles for detailed, clean street-level mapping
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
@@ -322,7 +322,8 @@ function setupMap() {
             searchBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             searchBtn.disabled = true;
             try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&dedupe=1&q=${encodeURIComponent(query)}`, {
+                // Enhanced search: higher limit for better results, extratags for detail
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=10&dedupe=1&extratags=1&namedetails=1&q=${encodeURIComponent(query)}`, {
                     headers: { 'Accept-Language': 'en' }
                 });
                 const data = await res.json();
@@ -330,14 +331,23 @@ function setupMap() {
                     const result = data[0];
                     const lat = parseFloat(result.lat);
                     const lon = parseFloat(result.lon);
-                    const zoom = getZoomForType(result.type) || getZoomForType(result.class) || 16;
+                    // Use minimum zoom 12 for city-level detail; deeper for specific addresses
+                    const baseZoom = getZoomForType(result.type) || getZoomForType(result.class) || 14;
+                    const zoom = Math.max(12, baseZoom);
                     map.flyTo([lat, lon], zoom, { duration: 1.5 });
                     if(previewMarker) map.removeLayer(previewMarker);
                     previewMarker = L.marker([lat, lon]).addTo(map);
                     const locName = buildLocationName(result.address, result.display_name);
                     showAddPointPopup(lat, lon, locName);
                 } else {
-                    alert('Location not found. Try a different search term or be more specific (e.g., "123 Main St, Dallas, TX").');
+                    // Fallback: try a broader search with fewer terms
+                    const broadQuery = query.split(',').map(s => s.trim()).filter((s, i) => i < 2).join(', ');
+                    if (broadQuery !== query) {
+                        searchInput.value = broadQuery;
+                        searchBtn.click();
+                        return;
+                    }
+                    alert('Location not found. Try a different search term, include city and state (e.g., "123 Main St, Dallas, TX" or "Amarillo, Texas").');
                 }
             } catch(err) {
                 console.error(err);
