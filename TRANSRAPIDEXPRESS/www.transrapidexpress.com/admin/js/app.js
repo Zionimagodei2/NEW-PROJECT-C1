@@ -320,27 +320,107 @@ function setupMap() {
             searchBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             searchBtn.disabled = true;
             try {
-                // Try multiple search strategies for better results
+                // Common request headers — Nominatim requires a User-Agent per their usage policy
+                const headers = {
+                    'Accept-Language': 'en',
+                    'User-Agent': 'TransrapidExpressAdmin/1.0'
+                };
+
+                // Small delay helper to respect Nominatim rate limit (1 req/sec)
+                const delay = ms => new Promise(r => setTimeout(r, ms));
+
                 let data = [];
+
+                // Detect country codes from the query for targeted searches
+                const countryMap = {
+                    'UK': 'gb', 'UNITED KINGDOM': 'gb', 'ENGLAND': 'gb', 'SCOTLAND': 'gb', 'WALES': 'gb', 'NORTHERN IRELAND': 'gb',
+                    'USA': 'us', 'UNITED STATES': 'us', 'AMERICA': 'us',
+                    'CANADA': 'ca', 'AUSTRALIA': 'au', 'GERMANY': 'de', 'FRANCE': 'fr', 'SPAIN': 'es',
+                    'ITALY': 'it', 'JAPAN': 'jp', 'CHINA': 'cn', 'INDIA': 'in', 'BRAZIL': 'br',
+                    'MEXICO': 'mx', 'SOUTH AFRICA': 'za', 'NIGERIA': 'ng', 'CAMEROON': 'cm',
+                    'GHANA': 'gh', 'KENYA': 'ke', 'EGYPT': 'eg', 'DUBAI': 'ae', 'UAE': 'ae',
+                    'SAUDI': 'sa', 'TURKEY': 'tr', 'RUSSIA': 'ru', 'SOUTH KOREA': 'kr',
+                    'NETHERLANDS': 'nl', 'BELGIUM': 'be', 'PORTUGAL': 'pt', 'SWITZERLAND': 'ch',
+                    'POLAND': 'pl', 'SWEDEN': 'se', 'NORWAY': 'no', 'DENMARK': 'dk', 'FINLAND': 'fi',
+                    'IRELAND': 'ie', 'NEW ZEALAND': 'nz', 'SINGAPORE': 'sg', 'THAILAND': 'th',
+                    'MALAYSIA': 'my', 'INDONESIA': 'id', 'PHILIPPINES': 'ph', 'ARGENTINA': 'ar',
+                    'COLOMBIA': 'co', 'CHILE': 'cl', 'PERU': 'pe'
+                };
+                const usStates = /\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC)\b/i;
+
+                // Detect country from query
+                let detectedCC = null;
+                const upperQuery = query.toUpperCase();
+                for (const [keyword, cc] of Object.entries(countryMap)) {
+                    if (upperQuery.includes(keyword)) { detectedCC = cc; break; }
+                }
+                // Also detect UK postcodes (e.g., BT19 6XD, SW1A 1AA)
+                if (!detectedCC && /\b[A-Z]{1,2}\d{1,2}[A-Z]?\s+\d[A-Z]{2}\b/i.test(query)) detectedCC = 'gb';
+                // Detect US ZIP codes (5 digit)
+                if (!detectedCC && /\b\d{5}(?:-\d{4})?\b/.test(query)) detectedCC = 'us';
+                // Detect Canadian postal codes (e.g., K1A 0B1)
+                if (!detectedCC && /\b[A-Z]\d[A-Z]\s+\d[A-Z]\d\b/i.test(query)) detectedCC = 'ca';
+
+                // Build search strategies — ordered from most specific to broadest
                 const searchStrategies = [
-                    // Strategy 1: Exact search with addressdetails
-                    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=10&dedupe=1&extratags=1&q=${encodeURIComponent(query)}`,
-                    // Strategy 2: If single word or short query, try as city/locality
-                    (query.split(/\s+/).length <= 2) ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=10&dedupe=1&featuretype=settlement&q=${encodeURIComponent(query)}` : null,
-                    // Strategy 3: Structured search for US addresses
-                    (query.match(/\b(TX|CA|NY|FL|IL|PA|OH|GA|NC|MI|NJ|VA|WA|AZ|MA|TN|IN|MO|MD|WI|CO|MN|SC|AL|LA|KY|OR|OK|CT|UT|IA|NV|AR|MS|KS|NM|NE|WV|ID|HI|NH|ME|MT|RI|DE|SD|ND|AK|VT|WY|DC)\b/i)) ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=10&dedupe=1&countrycodes=us&q=${encodeURIComponent(query)}` : null
+                    // Strategy 1: Full search with all details
+                    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&extratags=1&q=${encodeURIComponent(query)}`,
+
+                    // Strategy 2: Simpler search without extratags (sometimes works better)
+                    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&q=${encodeURIComponent(query)}`,
+
+                    // Strategy 3: With detected country code for targeted results
+                    detectedCC ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=${detectedCC}&q=${encodeURIComponent(query)}` : null,
+
+                    // Strategy 4: US-specific if US state abbreviation detected
+                    usStates.test(query) ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=us&q=${encodeURIComponent(query)}` : null,
+
+                    // Strategy 5: Short query as settlement/locality
+                    (query.split(/\s+/).length <= 2) ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&featuretype=settlement&q=${encodeURIComponent(query)}` : null,
+
+                    // Strategy 6: Try with normalized query (remove special chars, extra spaces)
+                    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&q=${encodeURIComponent(query.replace(/[,\.\-#\/]/g, ' ').replace(/\s+/g, ' ').trim())}`,
+
+                    // Strategy 7: Try structured search if address has commas (street, city, country)
+                    (query.includes(',')) ? (() => {
+                        const parts = query.split(',').map(p => p.trim());
+                        const params = new URLSearchParams({ format: 'json', addressdetails: '1', limit: '15', dedupe: '1' });
+                        if (parts.length >= 1) params.set('street', parts[0]);
+                        if (parts.length >= 2) params.set('city', parts[1]);
+                        if (parts.length >= 3) params.set('state', parts[2]);
+                        if (parts.length >= 4) params.set('country', parts[3]);
+                        if (detectedCC) params.set('countrycodes', detectedCC);
+                        return `https://nominatim.openstreetmap.org/search?${params.toString()}`;
+                    })() : null,
+
+                    // Strategy 8: Broadest possible search — no dedupe, higher limit
+                    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=25&q=${encodeURIComponent(query)}`
                 ].filter(Boolean);
 
-                for (const url of searchStrategies) {
+                // Execute strategies sequentially with delays, collect ALL results
+                let allResults = [];
+                for (let si = 0; si < searchStrategies.length; si++) {
                     try {
-                        const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+                        if (si > 0) await delay(1100); // Respect 1 req/sec rate limit
+                        const res = await fetch(searchStrategies[si], { headers });
+                        if (!res.ok) continue;
                         const results = await res.json();
                         if (results && results.length > 0) {
-                            data = results;
-                            break;
+                            // Deduplicate by place_id across strategies
+                            for (const r of results) {
+                                if (!allResults.some(existing => existing.place_id === r.place_id)) {
+                                    allResults.push(r);
+                                }
+                            }
+                            // If we found results on the very first strategy, use them directly (fast path)
+                            if (si === 0 && results.length > 0) break;
+                            // If we've accumulated enough results, stop searching
+                            if (allResults.length >= 3) break;
                         }
                     } catch(e) { continue; }
                 }
+
+                const data = allResults;
 
                 if (data && data.length > 0) {
                     // Show dropdown for multiple results
@@ -409,7 +489,7 @@ function setupMap() {
                     popupContent.appendChild(btnRow);
                     previewMarker.bindPopup(popupContent).openPopup();
                 } else {
-                    alert('Location not found. Try a different search term or be more specific (e.g., "123 Main St, Dallas, TX").');
+                    alert('Location not found after multiple search attempts. Try:\n• Be more specific (e.g., "2 Belgravia Cres, Bangor, UK")\n• Try without house number (e.g., "Belgravia Cres, Bangor, UK")\n• Use the city name only (e.g., "Bangor, UK")\n• Or click directly on the map to place a point');
                 }
             } catch(err) {
                 console.error(err);
@@ -432,7 +512,7 @@ function setupMap() {
         let locName = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
         try {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&zoom=18`, {
-                headers: { 'Accept-Language': 'en' }
+                headers: { 'Accept-Language': 'en', 'User-Agent': 'TransrapidExpressAdmin/1.0' }
             });
             const data = await res.json();
             if (data && data.display_name) {
