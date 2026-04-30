@@ -457,6 +457,20 @@ SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIn...'" rows="4" style="background: rgba(0,0,0
             window.location.reload();
         });
     }
+    // Bind mobile menu toggle — works even if module fails
+    var menuToggle = document.getElementById('menuToggle');
+    var sidebar = document.querySelector('.sidebar');
+    var sidebarOverlay = document.getElementById('sidebarOverlay');
+    if (menuToggle && sidebar && sidebarOverlay) {
+        menuToggle.addEventListener('click', function() {
+            sidebar.classList.add('active');
+            sidebarOverlay.classList.add('active');
+        });
+        sidebarOverlay.addEventListener('click', function() {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+        });
+    }
 })();
 </script>
 <!-- Main App Module (loads Supabase dynamically, won't block login) -->

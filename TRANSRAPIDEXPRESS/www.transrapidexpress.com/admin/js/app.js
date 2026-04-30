@@ -1,14 +1,25 @@
 // --- Supabase: Dynamic import so login never breaks if CDN is down ---
 let supabase = null;
-(async () => {
+let _supabaseReady = false;
+const _supabaseReadyPromise = (async () => {
     try {
         const module = await import('./supabase-config.js');
         supabase = module.supabase;
+        _supabaseReady = true;
         console.log('Supabase connected successfully.');
     } catch (e) {
         console.warn('Supabase module failed to load. Running in offline/local mode.', e);
+        _supabaseReady = true; // Mark as ready even on failure so we don't hang
     }
 })();
+
+// Helper: wait for Supabase to finish loading (or fail)
+function waitForSupabase(timeout = 5000) {
+    return Promise.race([
+        _supabaseReadyPromise,
+        new Promise(resolve => setTimeout(resolve, timeout))
+    ]);
+}
 
 const ADMIN_HASH = 'edb4c656c930a9681dd2599f9b842b5bfa6548d196c507d4a80c087d4535a580'; // SHA-256 of Pablopablopablo$
 const SESSION_KEY = 'transrapid_admin_auth';
@@ -1093,12 +1104,22 @@ window.toggleStopType = function(index) {
 
 // --- Status Loader ---
 async function loadDashboardStats(elements) {
+    // Wait for Supabase import to complete before querying
+    await waitForSupabase();
     let shipmentsDB = {};
     if (supabase) {
-        const { data } = await supabase.from('shipments').select('*');
-        if (data) data.forEach(row => shipmentsDB[row.tracking_code] = row.data);
-    } else {
-        shipmentsDB = getShipments();
+        try {
+            const { data, error } = await supabase.from('shipments').select('*');
+            if (error) console.error('Supabase fetch error:', error);
+            if (data) data.forEach(row => shipmentsDB[row.tracking_code] = row.data);
+        } catch(e) {
+            console.error('Supabase query failed:', e);
+        }
+    }
+    // Always merge localStorage data as fallback/supplement
+    const localDB = getShipments();
+    for (const [code, data] of Object.entries(localDB)) {
+        if (!shipmentsDB[code]) shipmentsDB[code] = data;
     }
 
     const codes = Object.keys(shipmentsDB);
@@ -1134,12 +1155,22 @@ function getStatusClass(status) {
 
 // --- Manage Records ---
 async function loadManageRecords(elements) {
+    // Wait for Supabase import to complete before querying
+    await waitForSupabase();
     let shipmentsDB = {};
     if (supabase) {
-        const { data } = await supabase.from('shipments').select('*');
-        if (data) data.forEach(row => shipmentsDB[row.tracking_code] = row.data);
-    } else {
-        shipmentsDB = getShipments();
+        try {
+            const { data, error } = await supabase.from('shipments').select('*');
+            if (error) console.error('Supabase fetch error:', error);
+            if (data) data.forEach(row => shipmentsDB[row.tracking_code] = row.data);
+        } catch(e) {
+            console.error('Supabase query failed:', e);
+        }
+    }
+    // Always merge localStorage data as fallback/supplement
+    const localDB = getShipments();
+    for (const [code, data] of Object.entries(localDB)) {
+        if (!shipmentsDB[code]) shipmentsDB[code] = data;
     }
 
     const tbody = document.querySelector('#manageTable tbody');
@@ -1196,11 +1227,18 @@ window.deleteShipmentRecord = async function(trackingCode) {
 
 // Global function: Edit shipment — pre-fills the create form with existing data
 window.editShipment = async function(trackingCode) {
+    await waitForSupabase();
     let shipment = null;
     if (supabase) {
-        const { data } = await supabase.from('shipments').select('data').eq('tracking_code', trackingCode).single();
-        if (data) shipment = data.data;
-    } else {
+        try {
+            const { data, error } = await supabase.from('shipments').select('data').eq('tracking_code', trackingCode).single();
+            if (error) console.error('Supabase fetch error:', error);
+            if (data) shipment = data.data;
+        } catch(e) {
+            console.error('Supabase query failed:', e);
+        }
+    }
+    if (!shipment) {
         const db = getShipments();
         shipment = db[trackingCode];
     }

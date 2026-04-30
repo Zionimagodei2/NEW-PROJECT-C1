@@ -192,7 +192,8 @@ button {
     border: 1px solid var(--panel-border);
     box-shadow: var(--card-shadow);
 }
-.menu-toggle { display: none; font-size: 1.5rem; color: var(--text-main); cursor: pointer; }
+.menu-toggle { display: none; font-size: 1.5rem; color: var(--text-main); cursor: pointer; padding: 8px; }
+.sidebar-overlay { display: none; }
 .search-bar { background: #F0F2F7; padding: 0.5rem 1rem; border-radius: 20px; display: flex; align-items: center; gap: 0.5rem; border: 1px solid var(--panel-border); }
 .search-bar input { background: transparent; border: none; padding: 0; outline: none; box-shadow: none; color: var(--text-main); }
 .topbar-actions { display: flex; gap: 1rem; }
@@ -401,6 +402,7 @@ tbody tr:hover { background: rgba(217, 119, 6, 0.03); }
     .sidebar-overlay {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
         background: rgba(0,0,0,0.15); z-index: 999; display: none;
+        cursor: pointer;
     }
     .sidebar-overlay.active { display: block; }
 }
