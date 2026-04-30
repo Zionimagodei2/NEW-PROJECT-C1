@@ -35,8 +35,8 @@ let previewMarker = null;
 const markers = [];
 let currentPositionIndex = -1; // -1 means not set; will default to last waypoint
 let destinationIndex = -1; // -1 means not set; will auto-calculate as last stop-type waypoint
-let googleAutocomplete = null; // Google Places Autocomplete instance
-let googlePlacesService = null; // Google Places Service for details
+let googleApiValid = null; // null=unchecked, true=working, false=not activated
+let googleApiCheckPromise = null; // Promise for async API validation
 
 // --- Geocoding Helpers ---
 // Build a readable short location name from Nominatim address object
@@ -104,8 +104,55 @@ function buildPlaceLocationName(place) {
     return place.name || place.formatted_address || 'Unknown Location';
 }
 
-// Google Geocoding — returns array of results similar to Nominatim format
+// --- Google Maps API Validation ---
+// Checks if the Google Maps API key is actually working by doing a test geocode.
+// This prevents us from hooking onto a "lifeless" API key that blocks the UI.
+async function validateGoogleMapsApi() {
+    if (googleApiValid !== null) return googleApiValid; // Already checked
+    if (googleApiCheckPromise) return googleApiCheckPromise;
+
+    googleApiCheckPromise = (async () => {
+        try {
+            if (!window.google || !window.google.maps || !window.google.maps.places) {
+                console.warn('Google Maps JS API not loaded or Places library missing.');
+                googleApiValid = false;
+                return false;
+            }
+            // Test with AutocompleteService (lightweight, no UI attachment)
+            const service = new google.maps.places.AutocompleteService();
+            return new Promise((resolve) => {
+                service.getPlacePredictions({ input: 'London' }, (predictions, status) => {
+                    if (status === google.maps.places.PlacesServiceStatus.OK && predictions && predictions.length > 0) {
+                        console.log('Google Maps API key is VALID — worldwide search enabled.');
+                        googleApiValid = true;
+                        resolve(true);
+                    } else {
+                        console.warn('Google Maps API key is NOT activated. Status:', status);
+                        console.warn('Enable these APIs in Google Cloud Console:');
+                        console.warn('  → Geocoding API');
+                        console.warn('  → Places API');
+                        console.warn('  → Maps JavaScript API');
+                        console.warn('Falling back to Nominatim (OpenStreetMap) search.');
+                        googleApiValid = false;
+                        resolve(false);
+                    }
+                });
+            });
+        } catch (e) {
+            console.warn('Google Maps API validation failed:', e);
+            googleApiValid = false;
+            return false;
+        } finally {
+            googleApiCheckPromise = null;
+        }
+    })();
+
+    return googleApiCheckPromise;
+}
+
+// Google Geocoding — returns array of results (only called if API is validated)
 async function googleGeocode(query) {
+    if (googleApiValid !== true) return [];
     if (!window.google || !window.google.maps) return [];
     return new Promise((resolve) => {
         const geocoder = new google.maps.Geocoder();
@@ -119,8 +166,9 @@ async function googleGeocode(query) {
     });
 }
 
-// Google Places Autocomplete — returns predictions
+// Google Places Autocomplete predictions — returns predictions (only called if API is validated)
 async function googleAutocompleteSearch(query) {
+    if (googleApiValid !== true) return [];
     if (!window.google || !window.google.maps) return [];
     return new Promise((resolve) => {
         const service = new google.maps.places.AutocompleteService();
@@ -136,9 +184,9 @@ async function googleAutocompleteSearch(query) {
 
 // Google Places Details — gets full details including geometry for a place_id
 async function googlePlaceDetails(placeId) {
-    if (!window.google || !window.google.maps || !map) return null;
+    if (googleApiValid !== true) return null;
+    if (!window.google || !window.google.maps) return null;
     return new Promise((resolve) => {
-        // Create a hidden div for the Places service (it requires a map or div)
         const service = new google.maps.places.PlacesService(document.createElement('div'));
         service.getDetails({ placeId: placeId, fields: ['name', 'formatted_address', 'geometry', 'address_components', 'type'] }, (place, status) => {
             if (status === google.maps.places.PlacesServiceStatus.OK && place) {
@@ -157,7 +205,7 @@ function showLocationOnMap(lat, lon, locName, zoomLevel) {
     if (previewMarker) map.removeLayer(previewMarker);
     previewMarker = L.marker([lat, lon]).addTo(map);
     const popupContent = document.createElement('div');
-    popupContent.innerHTML = `<b>${locName}</b><br><small style="color:#8892b0;">${lat.toFixed(4)}, ${lon.toFixed(4)}</small><br>`;
+    popupContent.innerHTML = `<b>${locName}</b><br><small style="color:rgba(26,29,38,0.55);">${lat.toFixed(4)}, ${lon.toFixed(4)}</small><br>`;
     const btnRow = document.createElement('div');
     btnRow.style.marginTop = '8px';
     btnRow.style.display = 'flex';
@@ -191,82 +239,6 @@ function showLocationOnMap(lat, lon, locName, zoomLevel) {
     btnRow.appendChild(transitBtn);
     popupContent.appendChild(btnRow);
     previewMarker.bindPopup(popupContent).openPopup();
-}
-
-// Show Google search results in dropdown (same UI style as Nominatim results)
-function showGoogleSearchResults(results, searchBtn) {
-    const existing = document.getElementById('searchResultsDropdown');
-    if (existing) existing.remove();
-
-    const dropdown = document.createElement('div');
-    dropdown.id = 'searchResultsDropdown';
-    dropdown.style.cssText = 'position:absolute;z-index:10000;background:rgba(15,23,42,0.95);backdrop-filter:blur(8px);border:1px solid rgba(255,159,28,0.4);border-radius:10px;max-height:320px;overflow-y:auto;width:100%;margin-top:4px;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
-
-    const searchInput = document.getElementById('mapSearchInput');
-    const searchContainer = searchInput.parentElement;
-    searchContainer.style.position = 'relative';
-    searchContainer.appendChild(dropdown);
-
-    results.forEach((item, index) => {
-        const isGeocode = item.geometry; // Google Geocode result vs Autocomplete prediction
-        const locName = isGeocode ? buildGoogleLocationName(item) : item.description;
-        const typeName = isGeocode ? (item.types ? item.types[0] : '') : (item.types ? item.types[0] : '');
-
-        let lat, lon;
-        if (isGeocode && item.geometry && item.geometry.location) {
-            lat = typeof item.geometry.location.lat === 'function' ? item.geometry.location.lat() : item.geometry.location.lat;
-            lon = typeof item.geometry.location.lng === 'function' ? item.geometry.location.lng() : item.geometry.location.lng;
-        }
-
-        const el = document.createElement('div');
-        el.style.cssText = 'padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.15s;display:flex;align-items:center;gap:10px;';
-        el.onmouseover = () => el.style.background = 'rgba(255,159,28,0.15)';
-        el.onmouseout = () => el.style.background = 'transparent';
-
-        const icon = document.createElement('span');
-        icon.style.cssText = 'color:#FF9F1C;font-size:0.85rem;min-width:20px;';
-        icon.innerHTML = '<i class="fa-solid fa-location-dot"></i>';
-
-        const textDiv = document.createElement('div');
-        const nameShort = locName.split(',').slice(0, 2).join(',');
-        const nameFull = locName;
-        textDiv.innerHTML = `<div style="font-size:0.85rem;font-weight:500;color:#fff;">${nameShort}</div><div style="font-size:0.7rem;color:#8892b0;">${nameFull} <span style="color:rgba(255,159,28,0.6);text-transform:uppercase;font-size:0.6rem;">${typeName}</span></div>`;
-
-        el.appendChild(icon);
-        el.appendChild(textDiv);
-
-        el.onclick = async () => {
-            dropdown.remove();
-            if (isGeocode && lat !== undefined) {
-                // Direct geocode result — show on map
-                showLocationOnMap(lat, lon, locName, 16);
-            } else if (item.place_id) {
-                // Autocomplete prediction — fetch details first
-                const place = await googlePlaceDetails(item.place_id);
-                if (place && place.geometry && place.geometry.location) {
-                    const pLat = typeof place.geometry.location.lat === 'function' ? place.geometry.location.lat() : place.geometry.location.lat;
-                    const pLon = typeof place.geometry.location.lng === 'function' ? place.geometry.location.lng() : place.geometry.location.lng;
-                    const pName = buildPlaceLocationName(place);
-                    showLocationOnMap(pLat, pLon, pName, 16);
-                } else {
-                    alert('Could not get details for this location. Try the search button instead.');
-                }
-            }
-        };
-
-        dropdown.appendChild(el);
-    });
-
-    // Close dropdown when clicking outside
-    setTimeout(() => {
-        const closeHandler = (e) => {
-            if (!dropdown.contains(e.target) && e.target !== document.getElementById('mapSearchInput')) {
-                dropdown.remove();
-                document.removeEventListener('click', closeHandler);
-            }
-        };
-        document.addEventListener('click', closeHandler);
-    }, 100);
 }
 
 // --- Security Helpers ---
@@ -625,45 +597,162 @@ function setupMap() {
         maxZoom: 19
     }).addTo(map);
 
-    // Map Search — Google Maps primary, Nominatim fallback
+    // Map Search — custom autocomplete dropdown (Google if API valid, else Nominatim)
     const searchBtn = document.getElementById('mapSearchBtn');
     const searchInput = document.getElementById('mapSearchInput');
     if (searchBtn && searchInput) {
 
-        // --- Google Places Autocomplete on the search input ---
-        // Shows real-time suggestions as the user types
-        try {
-            if (window.google && window.google.maps && google.maps.places) {
-                googleAutocomplete = new google.maps.places.Autocomplete(searchInput, {
-                    fields: ['name', 'formatted_address', 'geometry', 'address_components'],
-                    types: ['geocode', 'establishment']
-                });
-                googleAutocomplete.addListener('place_changed', () => {
-                    const place = googleAutocomplete.getPlace();
-                    if (place && place.geometry && place.geometry.location) {
-                        const lat = typeof place.geometry.location.lat === 'function' ? place.geometry.location.lat() : place.geometry.location.lat;
-                        const lon = typeof place.geometry.location.lng === 'function' ? place.geometry.location.lng() : place.geometry.location.lng;
-                        const locName = buildPlaceLocationName(place);
-                        showLocationOnMap(lat, lon, locName, 16);
-                    }
-                });
-                console.log('Google Places Autocomplete initialized.');
+        // --- Validate Google Maps API on first map setup ---
+        // This runs ONCE and caches the result. If the key is dead, we skip all Google calls.
+        validateGoogleMapsApi();
+
+        // --- API status indicator ---
+        const apiIndicator = document.createElement('div');
+        apiIndicator.id = 'apiStatusIndicator';
+        apiIndicator.style.cssText = 'font-size:0.7rem;padding:4px 10px;border-radius:4px;margin-top:4px;display:none;';
+        searchInput.parentElement.appendChild(apiIndicator);
+
+        // Show API status after validation completes
+        validateGoogleMapsApi().then(valid => {
+            if (valid) {
+                apiIndicator.textContent = 'Google Maps: Connected';
+                apiIndicator.style.cssText = 'font-size:0.7rem;padding:4px 10px;border-radius:4px;margin-top:4px;display:block;background:rgba(46,204,113,0.15);color:#2ecc71;';
+            } else {
+                apiIndicator.innerHTML = 'Google Maps: API not activated — using OpenStreetMap. <a href="https://console.cloud.google.com/apis/library?filter=category:maps" target="_blank" style="color:#FF9F1C;text-decoration:underline;">Enable APIs</a>';
+                apiIndicator.style.cssText = 'font-size:0.7rem;padding:4px 10px;border-radius:4px;margin-top:4px;display:block;background:rgba(255,159,28,0.1);color:#FF9F1C;';
             }
-        } catch(e) {
-            console.warn('Google Places Autocomplete failed to initialize:', e);
+        });
+
+        // --- Custom Autocomplete Dropdown ---
+        // Shows as user types — NEVER hijacks the input like Google's Autocomplete widget
+        let autocompleteTimer = null;
+        let autocompleteDropdown = null;
+
+        function removeAutocompleteDropdown() {
+            if (autocompleteDropdown) {
+                autocompleteDropdown.remove();
+                autocompleteDropdown = null;
+            }
         }
 
-        // Allow Enter key to search (but don't trigger if autocomplete is handling it)
+        function showAutocompleteDropdown(items) {
+            removeAutocompleteDropdown();
+            if (!items || items.length === 0) return;
+
+            autocompleteDropdown = document.createElement('div');
+            autocompleteDropdown.id = 'liveAutocompleteDropdown';
+            autocompleteDropdown.style.cssText = 'position:absolute;z-index:10000;background:rgba(255,255,255,0.98);backdrop-filter:blur(12px);border:1px solid rgba(217,119,6,0.3);border-radius:10px;max-height:300px;overflow-y:auto;width:100%;margin-top:2px;box-shadow:0 8px 32px rgba(0,0,0,0.1);';
+
+            items.forEach(item => {
+                const el = document.createElement('div');
+                el.style.cssText = 'padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.04);transition:background 0.15s;display:flex;align-items:center;gap:10px;';
+                el.onmouseover = () => el.style.background = 'rgba(217,119,6,0.08)';
+                el.onmouseout = () => el.style.background = 'transparent';
+
+                const isGoogle = !!item.isGoogle;
+                const icon = document.createElement('span');
+                icon.style.cssText = 'color:#FF9F1C;font-size:0.85rem;min-width:20px;';
+                icon.innerHTML = isGoogle ? '<i class="fa-solid fa-globe"></i>' : '<i class="fa-solid fa-location-dot"></i>';
+
+                const textDiv = document.createElement('div');
+                const shortName = isGoogle ? (item.description || '').split(',').slice(0, 2).join(',') : (item.display_name || '').split(',').slice(0, 2).join(',');
+                const fullName = isGoogle ? (item.description || '') : (item.display_name || '');
+                const typeLabel = isGoogle ? 'Google' : (item.type || 'OSM');
+                textDiv.innerHTML = `<div style="font-size:0.85rem;font-weight:500;color:#1A1D26;">${shortName}</div><div style="font-size:0.7rem;color:rgba(26,29,38,0.55);">${fullName} <span style="color:rgba(217,119,6,0.7);text-transform:uppercase;font-size:0.6rem;">${typeLabel}</span></div>`;
+
+                el.appendChild(icon);
+                el.appendChild(textDiv);
+
+                el.onclick = async () => {
+                    removeAutocompleteDropdown();
+                    if (isGoogle && item.place_id) {
+                        // Google Autocomplete prediction — fetch details then show on map
+                        searchInput.value = item.description || '';
+                        const place = await googlePlaceDetails(item.place_id);
+                        if (place && place.geometry && place.geometry.location) {
+                            const pLat = typeof place.geometry.location.lat === 'function' ? place.geometry.location.lat() : place.geometry.location.lat;
+                            const pLon = typeof place.geometry.location.lng === 'function' ? place.geometry.location.lng() : place.geometry.location.lng;
+                            const pName = buildPlaceLocationName(place);
+                            showLocationOnMap(pLat, pLon, pName, 16);
+                        }
+                    } else if (isGoogle && item.geometry) {
+                        // Google Geocode result — show directly
+                        const lat = typeof item.geometry.location.lat === 'function' ? item.geometry.location.lat() : item.geometry.location.lat;
+                        const lon = typeof item.geometry.location.lng === 'function' ? item.geometry.location.lng() : item.geometry.location.lng;
+                        const locName = buildGoogleLocationName(item);
+                        searchInput.value = locName;
+                        showLocationOnMap(lat, lon, locName, 16);
+                    } else {
+                        // Nominatim result
+                        const lat = parseFloat(item.lat);
+                        const lon = parseFloat(item.lon);
+                        const locName = buildLocationName(item.address, item.display_name);
+                        searchInput.value = locName;
+                        const zoom = getZoomForType(item.type) || getZoomForType(item.class) || 16;
+                        showLocationOnMap(lat, lon, locName, zoom);
+                    }
+                };
+
+                autocompleteDropdown.appendChild(el);
+            });
+
+            searchInput.parentElement.style.position = 'relative';
+            searchInput.parentElement.appendChild(autocompleteDropdown);
+
+            // Close on outside click
+            setTimeout(() => {
+                const closeHandler = (e) => {
+                    if (autocompleteDropdown && !autocompleteDropdown.contains(e.target) && e.target !== searchInput) {
+                        removeAutocompleteDropdown();
+                        document.removeEventListener('click', closeHandler);
+                    }
+                };
+                document.addEventListener('click', closeHandler);
+            }, 50);
+        }
+
+        // Live autocomplete as user types (debounced)
+        searchInput.addEventListener('input', () => {
+            clearTimeout(autocompleteTimer);
+            const query = searchInput.value.trim();
+            if (query.length < 3) {
+                removeAutocompleteDropdown();
+                return;
+            }
+            autocompleteTimer = setTimeout(async () => {
+                try {
+                    // Try Google first if API is valid
+                    if (googleApiValid === true) {
+                        const predictions = await googleAutocompleteSearch(query);
+                        if (predictions && predictions.length > 0) {
+                            const items = predictions.map(p => ({ ...p, isGoogle: true }));
+                            showAutocompleteDropdown(items);
+                            return;
+                        }
+                    }
+                    // Fallback: Nominatim
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`, {
+                        headers: { 'Accept-Language': 'en', 'User-Agent': 'TransrapidExpressAdmin/1.0' }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && data.length > 0) {
+                            const items = data.map(d => ({ ...d, isGoogle: false }));
+                            showAutocompleteDropdown(items);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Autocomplete error:', e);
+                }
+            }, 400); // 400ms debounce
+        });
+
+        // Allow Enter key to search
         searchInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                // Small delay to let autocomplete handle it first
-                setTimeout(() => {
-                    // If no autocomplete popup is visible, trigger manual search
-                    const pacContainer = document.querySelector('.pac-container');
-                    if (!pacContainer || pacContainer.style.display === 'none' || !pacContainer.offsetParent) {
-                        searchBtn.click();
-                    }
-                }, 300);
+                e.preventDefault();
+                removeAutocompleteDropdown();
+                searchBtn.click();
             }
         });
 
@@ -674,36 +763,36 @@ function setupMap() {
             if(!query) return;
             searchBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             searchBtn.disabled = true;
+            removeAutocompleteDropdown();
             try {
-                // ========= STRATEGY 1: Google Geocoding API =========
-                let googleResults = await googleGeocode(query);
+                // ========= STRATEGY 1: Google Geocoding API (only if validated) =========
+                if (googleApiValid === true) {
+                    let googleResults = await googleGeocode(query);
+                    if (googleResults && googleResults.length > 0) {
+                        if (googleResults.length === 1) {
+                            const result = googleResults[0];
+                            const lat = typeof result.geometry.location.lat === 'function' ? result.geometry.location.lat() : result.geometry.location.lat;
+                            const lon = typeof result.geometry.location.lng === 'function' ? result.geometry.location.lng() : result.geometry.location.lng;
+                            const locName = buildGoogleLocationName(result);
+                            showLocationOnMap(lat, lon, locName, 16);
+                            return;
+                        } else {
+                            const items = googleResults.map(r => ({ ...r, isGoogle: true }));
+                            showAutocompleteDropdown(items);
+                            return;
+                        }
+                    }
 
-                if (googleResults && googleResults.length > 0) {
-                    if (googleResults.length === 1) {
-                        // Single result — show directly on map
-                        const result = googleResults[0];
-                        const lat = typeof result.geometry.location.lat === 'function' ? result.geometry.location.lat() : result.geometry.location.lat;
-                        const lon = typeof result.geometry.location.lng === 'function' ? result.geometry.location.lng() : result.geometry.location.lng;
-                        const locName = buildGoogleLocationName(result);
-                        showLocationOnMap(lat, lon, locName, 16);
-                        return; // Done — no need for Nominatim
-                    } else {
-                        // Multiple results — show dropdown
-                        showGoogleSearchResults(googleResults, searchBtn);
-                        return; // Done
+                    // ========= STRATEGY 2: Google Places Autocomplete predictions =========
+                    let predictions = await googleAutocompleteSearch(query);
+                    if (predictions && predictions.length > 0) {
+                        const items = predictions.map(p => ({ ...p, isGoogle: true }));
+                        showAutocompleteDropdown(items);
+                        return;
                     }
                 }
 
-                // ========= STRATEGY 2: Google Places Autocomplete predictions =========
-                // If geocoding found nothing, try autocomplete predictions for partial matches
-                let predictions = await googleAutocompleteSearch(query);
-                if (predictions && predictions.length > 0) {
-                    showGoogleSearchResults(predictions, searchBtn);
-                    return; // Done
-                }
-
                 // ========= STRATEGY 3: Nominatim fallback =========
-                // If Google found nothing, fall back to Nominatim (OpenStreetMap)
                 const headers = {
                     'Accept-Language': 'en',
                     'User-Agent': 'TransrapidExpressAdmin/1.0'
@@ -745,20 +834,16 @@ function setupMap() {
                 // UK postcode detection
                 const ukPostcodeRegex = /\b([A-Z]{1,2}\d{1,2}[A-Z]?\s+\d[A-Z]{2})\b/i;
                 let detectedCC = null;
-                let detectedPostcode = null;
                 const pcMatch = query.match(ukPostcodeRegex);
-                if (pcMatch) { detectedCC = 'gb'; detectedPostcode = pcMatch[1]; }
+                if (pcMatch) { detectedCC = 'gb'; }
                 if (!detectedCC && /\b\d{5}(?:-\d{4})?\b/.test(query)) detectedCC = 'us';
 
-                // Build minimal Nominatim strategies (Google already tried the main query)
+                // Build Nominatim search strategies
                 const searchStrategies = [
-                    // With expanded abbreviations
+                    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&q=${encodeURIComponent(query)}`,
                     expandedQuery !== query ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&q=${encodeURIComponent(expandedQuery)}` : null,
-                    // With country code
                     detectedCC ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=${detectedCC}&q=${encodeURIComponent(query)}` : null,
-                    // Normalized query
                     `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&q=${encodeURIComponent(query.replace(/[,\.\-#\/]/g, ' ').replace(/\s+/g, ' ').trim())}`,
-                    // Broadest search
                     `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=25&q=${encodeURIComponent(expandedQuery !== query ? expandedQuery : query)}`
                 ].filter(Boolean);
 
@@ -784,7 +869,8 @@ function setupMap() {
 
                 if (data && data.length > 0) {
                     if (data.length > 1) {
-                        showSearchResults(data, searchBtn);
+                        const items = data.map(d => ({ ...d, isGoogle: false }));
+                        showAutocompleteDropdown(items);
                         return;
                     }
                     const result = data[0];
@@ -828,7 +914,7 @@ function setupMap() {
         }
 
         const popupContent = document.createElement('div');
-        popupContent.innerHTML = `<b>${locName}</b><br><small style="color:#8892b0;">${lat.toFixed(4)}, ${lng.toFixed(4)}</small><br>`;
+        popupContent.innerHTML = `<b>${locName}</b><br><small style="color:rgba(26,29,38,0.55);">${lat.toFixed(4)}, ${lng.toFixed(4)}</small><br>`;
         // Two confirm buttons: one for Stop (bold), one for Transit (subtle)
         const btnRow = document.createElement('div');
         btnRow.style.marginTop = '8px';
@@ -1089,100 +1175,6 @@ function updateMapDrawings() {
         const bounds = L.latLngBounds(allPoints);
         map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
     }
-}
-
-// Show search results dropdown for multiple matches
-function showSearchResults(results, searchBtn) {
-    // Remove existing dropdown if any
-    const existing = document.getElementById('searchResultsDropdown');
-    if (existing) existing.remove();
-
-    const dropdown = document.createElement('div');
-    dropdown.id = 'searchResultsDropdown';
-    dropdown.style.cssText = 'position:absolute;z-index:10000;background:rgba(15,23,42,0.95);backdrop-filter:blur(8px);border:1px solid rgba(255,159,28,0.4);border-radius:10px;max-height:280px;overflow-y:auto;width:100%;margin-top:4px;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
-
-    const searchInput = document.getElementById('mapSearchInput');
-    const searchContainer = searchInput.parentElement;
-    searchContainer.style.position = 'relative';
-    searchContainer.appendChild(dropdown);
-
-    results.forEach((result, index) => {
-        const lat = parseFloat(result.lat);
-        const lon = parseFloat(result.lon);
-        const locName = buildLocationName(result.address, result.display_name);
-        const type = result.type || result.class || '';
-
-        const item = document.createElement('div');
-        item.style.cssText = 'padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.15s;display:flex;align-items:center;gap:10px;';
-        item.onmouseover = () => item.style.background = 'rgba(255,159,28,0.15)';
-        item.onmouseout = () => item.style.background = 'transparent';
-
-        const icon = document.createElement('span');
-        icon.style.cssText = 'color:#FF9F1C;font-size:0.85rem;min-width:20px;';
-        icon.innerHTML = '<i class="fa-solid fa-location-dot"></i>';
-
-        const textDiv = document.createElement('div');
-        textDiv.innerHTML = `<div style="font-size:0.85rem;font-weight:500;color:#fff;">${locName.split(',').slice(0,2).join(',')}</div><div style="font-size:0.7rem;color:#8892b0;">${locName} <span style="color:rgba(255,159,28,0.6);text-transform:uppercase;font-size:0.6rem;">${type}</span></div>`;
-
-        item.appendChild(icon);
-        item.appendChild(textDiv);
-
-        item.onclick = () => {
-            dropdown.remove();
-            const zoom = getZoomForType(result.type) || getZoomForType(result.class) || 16;
-            map.flyTo([lat, lon], zoom, { duration: 1.5 });
-            if(previewMarker) map.removeLayer(previewMarker);
-            previewMarker = L.marker([lat, lon]).addTo(map);
-            const popupContent = document.createElement('div');
-            popupContent.innerHTML = `<b>${locName}</b><br><small style="color:#8892b0;">${lat.toFixed(4)}, ${lon.toFixed(4)}</small><br>`;
-            const btnRow = document.createElement('div');
-            btnRow.style.marginTop = '8px';
-            btnRow.style.display = 'flex';
-            btnRow.style.gap = '6px';
-            btnRow.style.flexWrap = 'wrap';
-
-            const stopBtn = document.createElement('button');
-            stopBtn.className = 'btn-primary';
-            stopBtn.style.fontSize = '0.8rem';
-            stopBtn.style.padding = '6px 12px';
-            stopBtn.innerHTML = '<i class="fa-solid fa-location-dot"></i> Add as Stop';
-            stopBtn.onclick = () => {
-                waypointsData.push({ lat, lng: lon, name: locName, time: new Date().toLocaleString(), status: waypointsData.length === 0 ? "Shipment Started" : "Transit Update", stopType: 'stop' });
-                currentPositionIndex = waypointsData.length - 1;
-                map.removeLayer(previewMarker); previewMarker = null;
-                updateMapDrawings();
-            };
-
-            const transitBtn = document.createElement('button');
-            transitBtn.className = 'btn-outline';
-            transitBtn.style.fontSize = '0.8rem';
-            transitBtn.style.padding = '6px 12px';
-            transitBtn.innerHTML = '<i class="fa-solid fa-circle" style="font-size:0.5rem;"></i> Add as Transit';
-            transitBtn.onclick = () => {
-                waypointsData.push({ lat, lng: lon, name: locName, time: new Date().toLocaleString(), status: "In transit", stopType: 'transit' });
-                map.removeLayer(previewMarker); previewMarker = null;
-                updateMapDrawings();
-            };
-
-            btnRow.appendChild(stopBtn);
-            btnRow.appendChild(transitBtn);
-            popupContent.appendChild(btnRow);
-            previewMarker.bindPopup(popupContent).openPopup();
-        };
-
-        dropdown.appendChild(item);
-    });
-
-    // Close dropdown when clicking outside
-    setTimeout(() => {
-        const closeHandler = (e) => {
-            if (!dropdown.contains(e.target)) {
-                dropdown.remove();
-                document.removeEventListener('click', closeHandler);
-            }
-        };
-        document.addEventListener('click', closeHandler);
-    }, 100);
 }
 
 // Global: Toggle a waypoint between 'stop' and 'transit'

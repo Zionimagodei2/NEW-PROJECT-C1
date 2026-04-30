@@ -368,45 +368,17 @@ tbody tr:hover { background: rgba(217, 119, 6, 0.03); }
 .map-search { display: flex; gap: 0.5rem; margin-bottom: 1rem; position: relative; }
 .map-search input { padding: 0.5rem 1rem; background: #F0F2F7; border: 1px solid var(--panel-border); color: var(--text-main); flex: 1; }
 
-/* Google Places Autocomplete dropdown styling */
-.pac-container {
-    background: #fff !important;
-    border: 1px solid rgba(0,0,0,0.1) !important;
-    border-radius: 0 0 10px 10px !important;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important;
-    font-family: 'Outfit', sans-serif !important;
-    z-index: 10000 !important;
-    margin-top: 2px !important;
-    overflow: hidden !important;
+/* Hide Google's built-in Autocomplete dropdown — we use our own custom one */
+.pac-container { display: none !important; }
+
+/* Custom Live Autocomplete Dropdown */
+#liveAutocompleteDropdown {
+    font-family: 'Outfit', sans-serif;
 }
-.pac-item {
-    padding: 10px 14px !important;
-    border-bottom: 1px solid rgba(0,0,0,0.05) !important;
-    font-size: 0.85rem !important;
-    color: #1A1D26 !important;
-    cursor: pointer !important;
-    transition: background 0.15s !important;
+#apiStatusIndicator a {
+    color: var(--accent-gold);
+    text-decoration: underline;
 }
-.pac-item:hover {
-    background: rgba(217, 119, 6, 0.08) !important;
-}
-.pac-item-query {
-    font-weight: 500 !important;
-    color: #1A1D26 !important;
-}
-.pac-matched {
-    color: var(--accent-gold) !important;
-    font-weight: 600 !important;
-}
-.pac-secondary {
-    color: rgba(26, 29, 38, 0.55) !important;
-    font-size: 0.75rem !important;
-}
-.pac-icon {
-    display: none !important;
-}
-.hdpi.pac-logo { display: none !important; }
-.pac-logo::after { display: none !important; }
 
 /* -- Responsive Media Queries -- */
 @media (max-width: 1024px) {
