@@ -51,9 +51,9 @@ if (isTrackPage) {
         }
         .status-badge { color: #FF9F1C; font-weight: bold; font-size: 1.25rem; }
         .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
-        .info-group { margin-bottom: 1rem; }
-        .info-label { color: #8892b0; font-size: 0.85rem; display: block; margin-bottom: 0.2rem; }
-        .info-val { font-weight: 500; }
+        .info-row { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .info-label { color: #8892b0; font-size: 0.85rem; font-weight: 500; flex-shrink: 0; }
+        .info-val { font-weight: 600; text-align: right; margin-left: 12px; word-break: break-word; }
         .map-container { height: 480px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin-top: 1rem; }
         .timeline { margin-top: 2rem; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 1.5rem; }
         .timeline-item { position: relative; margin-bottom: 2rem; }
@@ -221,6 +221,8 @@ if (isTrackPage) {
             .status-card div { text-align: center !important; }
             .map-container { height: 350px; }
             .map-legend { gap: 1rem; }
+            .info-row { font-size: 0.85rem; }
+            .info-val { font-size: 0.85rem; }
         }
     `;
     document.head.appendChild(trackStyles);
@@ -267,46 +269,46 @@ window.addEventListener('DOMContentLoaded', () => {
         <h3 style="margin: 2rem 0 1rem; color: #ffffff;">PRODUCT INFORMATION</h3>
         <div class="details-grid">
             <div>
-                <div class="info-group"><span class="info-label">Name</span><span class="info-val" id="res-name">--</span></div>
-                <div class="info-group"><span class="info-label">Barcode</span><span class="info-val" id="res-barcode">--</span></div>
-                <div class="info-group"><span class="info-label">Weight</span><span class="info-val" id="res-weight">--</span></div>
-                <div class="info-group"><span class="info-label">Description</span><span class="info-val" id="res-desc">--</span></div>
-                <div class="info-group"><span class="info-label">Estimated Delivery</span><span class="info-val" id="res-estdelivery">--</span></div>
+                <div class="info-row"><span class="info-label">Name</span><span class="info-val" id="res-name">--</span></div>
+                <div class="info-row"><span class="info-label">Barcode</span><span class="info-val" id="res-barcode">--</span></div>
+                <div class="info-row"><span class="info-label">Weight</span><span class="info-val" id="res-weight">--</span></div>
+                <div class="info-row"><span class="info-label">Description</span><span class="info-val" id="res-desc">--</span></div>
+                <div class="info-row"><span class="info-label">Est. Delivery</span><span class="info-val" id="res-estdelivery">--</span></div>
             </div>
             <div>
-                <div class="info-group"><span class="info-label">Declared Value</span><span class="info-val" id="res-value">--</span></div>
-                <div class="info-group"><span class="info-label">Circumstance</span><span class="info-val" id="res-circumstance">--</span></div>
-                <div class="info-group"><span class="info-label">Transportation</span><span class="info-val" id="res-transport">--</span></div>
-                <div class="info-group"><span class="info-label">Agency</span><span class="info-val" id="res-agency">--</span></div>
+                <div class="info-row"><span class="info-label">Declared Value</span><span class="info-val" id="res-value">--</span></div>
+                <div class="info-row"><span class="info-label">Circumstance</span><span class="info-val" id="res-circumstance">--</span></div>
+                <div class="info-row"><span class="info-label">Transportation</span><span class="info-val" id="res-transport">--</span></div>
+                <div class="info-row"><span class="info-label">Agency</span><span class="info-val" id="res-agency">--</span></div>
             </div>
         </div>
         <h3 style="margin: 2rem 0 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">RECEIVER <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></h3>
         <div class="details-grid">
             <div>
-                <div class="info-group"><span class="info-label">Name</span><span class="info-val" id="res-receiver-name">--</span></div>
-                <div class="info-group"><span class="info-label">Phone</span><span class="info-val" id="res-receiver-phone">--</span></div>
+                <div class="info-row"><span class="info-label">Name</span><span class="info-val" id="res-receiver-name">--</span></div>
+                <div class="info-row"><span class="info-label">Phone</span><span class="info-val" id="res-receiver-phone">--</span></div>
             </div>
             <div>
-                <div class="info-group"><span class="info-label">Email</span><span class="info-val" id="res-receiver-email">--</span></div>
+                <div class="info-row"><span class="info-label">Email</span><span class="info-val" id="res-receiver-email">--</span></div>
             </div>
         </div>
         <h3 style="margin: 2rem 0 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">SENDER <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></h3>
         <div class="details-grid">
             <div>
-                <div class="info-group"><span class="info-label">Name</span><span class="info-val" id="res-sender-name">--</span></div>
-                <div class="info-group"><span class="info-label">Email</span><span class="info-val" id="res-sender-email">--</span></div>
+                <div class="info-row"><span class="info-label">Name</span><span class="info-val" id="res-sender-name">--</span></div>
+                <div class="info-row"><span class="info-label">Email</span><span class="info-val" id="res-sender-email">--</span></div>
             </div>
             <div>
-                <div class="info-group"><span class="info-label">Phone</span><span class="info-val" id="res-sender-phone">--</span></div>
+                <div class="info-row"><span class="info-label">Phone</span><span class="info-val" id="res-sender-phone">--</span></div>
             </div>
         </div>
         <h3 style="margin: 2rem 0 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">KEY DATES <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></h3>
         <div class="details-grid">
             <div>
-                <div class="info-group"><span class="info-label">Shipped On</span><span class="info-val" id="res-shipped-on">--</span></div>
+                <div class="info-row"><span class="info-label">Shipped On</span><span class="info-val" id="res-shipped-on">--</span></div>
             </div>
             <div>
-                <div class="info-group"><span class="info-label">Last Updated</span><span class="info-val" id="res-last-updated">--</span></div>
+                <div class="info-row"><span class="info-label">Last Updated</span><span class="info-val" id="res-last-updated">--</span></div>
             </div>
         </div>
         <h3 style="margin: 1.5rem 0 0.5rem; color: #ffffff;">LIVE SHIPMENT MAP</h3>
