@@ -174,7 +174,9 @@ async function deleteShipment(trackingCode) {
 }
 
 // --- Main Initialization ---
-document.addEventListener('DOMContentLoaded', () => {
+// Module scripts are deferred, so DOMContentLoaded may have already fired.
+// Use readyState check to handle both cases.
+function initApp() {
     // 1. Safe Element Selectors
     const elements = {
         authOverlay: document.getElementById('authOverlay'),
@@ -396,7 +398,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-});
+}
+
+// Run initialization — works whether DOM is already loaded or not
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
 
 // --- Map Logic Function ---
 function setupMap() {
@@ -544,50 +553,205 @@ function setupMap() {
                     if (upperQuery.includes(keyword)) { detectedCC = cc; break; }
                 }
                 // Also detect UK postcodes (e.g., BT19 6XD, SW1A 1AA)
-                if (!detectedCC && /\b[A-Z]{1,2}\d{1,2}[A-Z]?\s+\d[A-Z]{2}\b/i.test(query)) detectedCC = 'gb';
+                const ukPostcodeRegex = /\b([A-Z]{1,2}\d{1,2}[A-Z]?\s+\d[A-Z]{2})\b/i;
+                let detectedPostcode = null;
+                const pcMatch = query.match(ukPostcodeRegex);
+                if (pcMatch) { detectedCC = 'gb'; detectedPostcode = pcMatch[1]; }
                 // Detect US ZIP codes (5 digit)
                 if (!detectedCC && /\b\d{5}(?:-\d{4})?\b/.test(query)) detectedCC = 'us';
                 // Detect Canadian postal codes (e.g., K1A 0B1)
                 if (!detectedCC && /\b[A-Z]\d[A-Z]\s+\d[A-Z]\d\b/i.test(query)) detectedCC = 'ca';
 
-                // Build search strategies — ordered from most specific to broadest
+                // --- Address abbreviation expansion ---
+                // Common UK/international address abbreviations → full forms
+                const abbreviations = {
+                    'CRES': 'Crescent', 'CR': 'Crescent',
+                    'RD': 'Road', 'Rd': 'Road',
+                    'ST': 'Street', 'STR': 'Street',
+                    'AVE': 'Avenue', 'AV': 'Avenue',
+                    'LN': 'Lane', 'LA': 'Lane',
+                    'DR': 'Drive', 'DRV': 'Drive',
+                    'PL': 'Place', 'PLC': 'Place',
+                    'CT': 'Court', 'CRT': 'Court',
+                    'SQ': 'Square',
+                    'TCE': 'Terrace', 'TER': 'Terrace', 'TERR': 'Terrace',
+                    'PK': 'Park', 'PRK': 'Park',
+                    'CL': 'Close',
+                    'GDNS': 'Gardens', 'GDN': 'Garden', 'GARDENS': 'Gardens',
+                    'MEWS': 'Mews',
+                    'BLVD': 'Boulevard', 'BVLD': 'Boulevard',
+                    'HWY': 'Highway', 'HIWAY': 'Highway',
+                    'FWY': 'Freeway', 'EXPY': 'Expressway',
+                    'TRL': 'Trail', 'PATH': 'Path',
+                    'WAY': 'Way',
+                    'CIR': 'Circle',
+                    'PKE': 'Pike',
+                    'EST': 'Estate', 'ESTS': 'Estates',
+                    'GRN': 'Green',
+                    'HILL': 'Hill',
+                    'VW': 'View',
+                    'WK': 'Walk',
+                    'YD': 'Yard',
+                    'BY': 'Bypass',
+                    'BRG': 'Bridge',
+                    'PDE': 'Parade',
+                    'QY': 'Quay',
+                    'WYND': 'Wynd'
+                };
+
+                // Expand abbreviations in the query — e.g., "Belgravia Cres" → "Belgravia Crescent"
+                function expandAbbreviations(q) {
+                    let expanded = q;
+                    for (const [abbr, full] of Object.entries(abbreviations)) {
+                        // Match abbreviation as a whole word (case-sensitive for short ones to avoid false positives)
+                        const regex = new RegExp('\\b' + abbr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+                        expanded = expanded.replace(regex, full);
+                    }
+                    return expanded;
+                }
+
+                const expandedQuery = expandAbbreviations(query);
+
+                // --- Parse address components for structured search ---
+                // Extract postcode, street, city from comma-separated query
+                let parsedStreet = null, parsedCity = null, parsedState = null, parsedCountry = null, parsedPostcode = null;
+
+                if (query.includes(',')) {
+                    const parts = query.split(',').map(p => p.trim());
+                    // Remove house number from street part if present
+                    parsedStreet = parts[0] ? expandAbbreviations(parts[0].replace(/^\d+\s+/, '').trim()) : null;
+                    // Check if parts contain postcode
+                    for (let pi = 1; pi < parts.length; pi++) {
+                        const part = parts[pi].trim();
+                        if (ukPostcodeRegex.test(part) && !parsedPostcode) {
+                            parsedPostcode = part.match(ukPostcodeRegex)[1];
+                            // If the part is ONLY a postcode, or city+postcode, extract city
+                            const cityPart = part.replace(ukPostcodeRegex, '').trim();
+                            if (cityPart && !parsedCity) parsedCity = cityPart;
+                        } else if (!parsedCity) {
+                            parsedCity = part;
+                        } else if (!parsedState) {
+                            parsedState = part;
+                        } else if (!parsedCountry) {
+                            parsedCountry = part;
+                        }
+                    }
+                    // If no postcode was found in parts, use detectedPostcode
+                    if (!parsedPostcode && detectedPostcode) parsedPostcode = detectedPostcode;
+                } else {
+                    // No commas — try to extract components from the query
+                    parsedPostcode = detectedPostcode;
+                }
+
+                // --- Extract partial street name for broader fallback ---
+                // e.g., "2 Belgravia Cres" → "Belgravia" (just the root name)
+                function extractStreetRoot(streetPart) {
+                    if (!streetPart) return null;
+                    // Remove house number
+                    let cleaned = streetPart.replace(/^\d+\s+/, '').trim();
+                    // Remove common suffixes
+                    const suffixes = ['Crescent', 'Road', 'Street', 'Avenue', 'Lane', 'Drive', 'Place', 'Court', 'Square', 'Terrace', 'Park', 'Close', 'Gardens', 'Garden', 'Mews', 'Boulevard', 'Highway', 'Way', 'Circle', 'Terrace', 'Green', 'Hill', 'View', 'Walk'];
+                    for (const s of suffixes) {
+                        if (cleaned.endsWith(' ' + s)) {
+                            return cleaned.replace(new RegExp(' ' + s + '$', 'i'), '').trim();
+                        }
+                    }
+                    // Also check abbreviated forms
+                    for (const [abbr] of Object.entries(abbreviations)) {
+                        if (cleaned.endsWith(' ' + abbr)) {
+                            return cleaned.replace(new RegExp(' ' + abbr + '$', 'i'), '').trim();
+                        }
+                    }
+                    return cleaned || null;
+                }
+
+                const streetRoot = extractStreetRoot(parsedStreet || (query.includes(',') ? query.split(',')[0].trim() : query));
+
+                // Build search strategies — ordered from most specific to broadest with smart fallbacks
                 const searchStrategies = [
-                    // Strategy 1: Full search with all details
+                    // Strategy 1: Full search with expanded abbreviations (Cres → Crescent)
+                    expandedQuery !== query ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&extratags=1&q=${encodeURIComponent(expandedQuery)}` : null,
+
+                    // Strategy 2: Full search with original query
                     `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&extratags=1&q=${encodeURIComponent(query)}`,
 
-                    // Strategy 2: Simpler search without extratags (sometimes works better)
-                    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&q=${encodeURIComponent(query)}`,
+                    // Strategy 3: Simpler search without extratags
+                    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&q=${encodeURIComponent(expandedQuery !== query ? expandedQuery : query)}`,
 
-                    // Strategy 3: With detected country code for targeted results
-                    detectedCC ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=${detectedCC}&q=${encodeURIComponent(query)}` : null,
+                    // Strategy 4: With detected country code for targeted results
+                    detectedCC ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=${detectedCC}&q=${encodeURIComponent(expandedQuery !== query ? expandedQuery : query)}` : null,
 
-                    // Strategy 4: US-specific if US state abbreviation detected
+                    // Strategy 5: US-specific if US state abbreviation detected
                     usStates.test(query) ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=us&q=${encodeURIComponent(query)}` : null,
 
-                    // Strategy 5: Short query as settlement/locality
-                    (query.split(/\s+/).length <= 2) ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&featuretype=settlement&q=${encodeURIComponent(query)}` : null,
-
-                    // Strategy 6: Try with normalized query (remove special chars, extra spaces)
-                    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&q=${encodeURIComponent(query.replace(/[,\.\-#\/]/g, ' ').replace(/\s+/g, ' ').trim())}`,
-
-                    // Strategy 7: Try structured search if address has commas (street, city, country)
+                    // Strategy 6: Structured search with proper postcode handling
                     (query.includes(',')) ? (() => {
-                        const parts = query.split(',').map(p => p.trim());
                         const params = new URLSearchParams({ format: 'json', addressdetails: '1', limit: '15', dedupe: '1' });
-                        if (parts.length >= 1) params.set('street', parts[0]);
-                        if (parts.length >= 2) params.set('city', parts[1]);
-                        if (parts.length >= 3) params.set('state', parts[2]);
-                        if (parts.length >= 4) params.set('country', parts[3]);
+                        if (parsedStreet) params.set('street', parsedStreet);
+                        if (parsedCity) params.set('city', parsedCity);
+                        if (parsedState) params.set('state', parsedState);
+                        if (parsedPostcode) params.set('postalcode', parsedPostcode);
                         if (detectedCC) params.set('countrycodes', detectedCC);
                         return `https://nominatim.openstreetmap.org/search?${params.toString()}`;
                     })() : null,
 
-                    // Strategy 8: Broadest possible search — no dedupe, higher limit
-                    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=25&q=${encodeURIComponent(query)}`
+                    // Strategy 7: Structured search without street (city + postcode only) — for when OSM doesn't have the street
+                    (parsedCity && parsedPostcode) ? (() => {
+                        const params = new URLSearchParams({ format: 'json', addressdetails: '1', limit: '15', dedupe: '1' });
+                        params.set('city', parsedCity);
+                        params.set('postalcode', parsedPostcode);
+                        if (detectedCC) params.set('countrycodes', detectedCC);
+                        return `https://nominatim.openstreetmap.org/search?${params.toString()}`;
+                    })() : null,
+
+                    // Strategy 8: Partial street name + city/country (e.g., "Belgravia" + "Bangor" + country code)
+                    // This catches nearby streets when the exact one isn't mapped in OSM
+                    (streetRoot && parsedCity) ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=${detectedCC || ''}&q=${encodeURIComponent(streetRoot + ' ' + parsedCity)}` : null,
+
+                    // Strategy 9: Partial street name + country code only (broader area search)
+                    (streetRoot && detectedCC) ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=${detectedCC}&q=${encodeURIComponent(streetRoot)}` : null,
+
+                    // Strategy 10: Try with normalized query (remove special chars, extra spaces)
+                    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&q=${encodeURIComponent(query.replace(/[,\.\-#\/]/g, ' ').replace(/\s+/g, ' ').trim())}`,
+
+                    // Strategy 11: Just the postcode area (e.g., "BT19" district)
+                    detectedPostcode ? (() => {
+                        const outcode = detectedPostcode.split(/\s/)[0]; // e.g., "BT19" from "BT19 6XD"
+                        return `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=gb&q=${encodeURIComponent(outcode)}`;
+                    })() : null,
+
+                    // Strategy 12: City only + country code
+                    parsedCity ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=${detectedCC || ''}&q=${encodeURIComponent(parsedCity)}` : null,
+
+                    // Strategy 13: Short query as settlement/locality
+                    (query.split(/\s+/).length <= 2) ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&featuretype=settlement&q=${encodeURIComponent(query)}` : null,
+
+                    // Strategy 14: Common misspelling variants (OSM data quality varies)
+                    // e.g., "Crescent" → also try "Cresent" (common OSM typo)
+                    (() => {
+                        let typoQuery = expandedQuery !== query ? expandedQuery : query;
+                        const typoMap = [
+                            ['Crescent', 'Cresent'], ['Crescent', 'Cresant'],
+                            ['Avenue', 'Aveneu'], ['Boulevard', 'Boulavard'],
+                            ['Terrace', 'Terace'], ['Gardens', 'Gardins']
+                        ];
+                        for (const [correct, typo] of typoMap) {
+                            if (typoQuery.includes(correct)) {
+                                typoQuery = typoQuery.replace(correct, typo);
+                                break; // Only apply one typo variant at a time
+                            }
+                        }
+                        return (typoQuery !== (expandedQuery !== query ? expandedQuery : query)) ?
+                            `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=${detectedCC || ''}&q=${encodeURIComponent(typoQuery)}` : null;
+                    })(),
+
+                    // Strategy 15: Broadest possible search — no dedupe, higher limit
+                    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=25&q=${encodeURIComponent(expandedQuery !== query ? expandedQuery : query)}`
                 ].filter(Boolean);
 
                 // Execute strategies sequentially with delays, collect ALL results
                 let allResults = [];
+                let foundExactMatch = false;
                 for (let si = 0; si < searchStrategies.length; si++) {
                     try {
                         if (si > 0) await delay(1100); // Respect 1 req/sec rate limit
@@ -601,10 +765,12 @@ function setupMap() {
                                     allResults.push(r);
                                 }
                             }
-                            // If we found results on the very first strategy, use them directly (fast path)
-                            if (si === 0 && results.length > 0) break;
-                            // If we've accumulated enough results, stop searching
-                            if (allResults.length >= 3) break;
+                            // Fast path: if the first 2 strategies (specific searches) found results, use them directly
+                            if (si <= 1 && results.length > 0) { foundExactMatch = true; break; }
+                            // If we found results from strategies 3-6 (country-targeted or structured), they're good enough
+                            if (si <= 6 && results.length > 0) break;
+                            // If we've accumulated enough results from broader searches, stop searching
+                            if (allResults.length >= 5) break;
                         }
                     } catch(e) { continue; }
                 }
@@ -680,7 +846,13 @@ function setupMap() {
                     popupContent.appendChild(btnRow);
                     previewMarker.bindPopup(popupContent).openPopup();
                 } else {
-                    alert('Location not found after multiple search attempts. Try:\n• Be more specific (e.g., "2 Belgravia Cres, Bangor, UK")\n• Try without house number (e.g., "Belgravia Cres, Bangor, UK")\n• Use the city name only (e.g., "Bangor, UK")\n• Or click directly on the map to place a point');
+                    let tipMsg = 'Location not found after multiple search attempts. Try:\n';
+                    tipMsg += '\u2022 Expand abbreviations (e.g., "Cres" \u2192 "Crescent", "Rd" \u2192 "Road")\n';
+                    tipMsg += '\u2022 Try without house number (e.g., "Belgravia Crescent, Bangor, UK")\n';
+                    tipMsg += '\u2022 Use just the street area (e.g., "Belgravia, Bangor, UK")\n';
+                    tipMsg += '\u2022 Use the city + postcode (e.g., "Bangor BT19, UK")\n';
+                    tipMsg += '\u2022 Or click directly on the map to place a point';
+                    alert(tipMsg);
                 }
             } catch(err) {
                 console.error(err);

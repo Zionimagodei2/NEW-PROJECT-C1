@@ -471,38 +471,6 @@ SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIn...'" rows="4" style="background: rgba(0,0,0
             sidebarOverlay.classList.remove('active');
         });
     }
-    // Bind tab switching — critical for navigation, must work even if module fails
-    var navItems = document.querySelectorAll('.nav-item[data-tab]');
-    var viewSections = document.querySelectorAll('.view-section');
-    navItems.forEach(function(item) {
-        item.addEventListener('click', function(e) {
-            e.preventDefault();
-            var tabId = item.getAttribute('data-tab');
-            navItems.forEach(function(n) { n.classList.remove('active'); });
-            viewSections.forEach(function(v) { v.style.display = 'none'; });
-            item.classList.add('active');
-            var targetView = document.getElementById('view-' + tabId);
-            if (targetView) targetView.style.display = 'block';
-            // Close mobile sidebar
-            if (sidebar) sidebar.classList.remove('active');
-            if (sidebarOverlay) sidebarOverlay.classList.remove('active');
-        });
-    });
-    // Bind "New Shipment" shortcut buttons
-    var goToCreateBtn = document.getElementById('goToCreateBtn');
-    if (goToCreateBtn) {
-        goToCreateBtn.addEventListener('click', function() {
-            var createTab = document.querySelector('.nav-item[data-tab="create-shipment"]');
-            if (createTab) createTab.click();
-        });
-    }
-    var goToCreateBtn2 = document.getElementById('goToCreateBtn2');
-    if (goToCreateBtn2) {
-        goToCreateBtn2.addEventListener('click', function() {
-            var createTab = document.querySelector('.nav-item[data-tab="create-shipment"]');
-            if (createTab) createTab.click();
-        });
-    }
 })();
 </script>
 <!-- Main App Module (loads Supabase dynamically, won't block login) -->
