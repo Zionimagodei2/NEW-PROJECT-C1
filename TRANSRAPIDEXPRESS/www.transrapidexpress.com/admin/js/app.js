@@ -606,20 +606,22 @@ function setupMap() {
         // This runs ONCE and caches the result. If the key is dead, we skip all Google calls.
         validateGoogleMapsApi();
 
-        // --- API status indicator ---
+        // --- API status indicator (inserted AFTER the map-search row, not inside it) ---
+        const searchRow = searchInput.parentElement; // .map-search div
         const apiIndicator = document.createElement('div');
         apiIndicator.id = 'apiStatusIndicator';
-        apiIndicator.style.cssText = 'font-size:0.7rem;padding:4px 10px;border-radius:4px;margin-top:4px;display:none;';
-        searchInput.parentElement.appendChild(apiIndicator);
+        apiIndicator.style.cssText = 'font-size:0.65rem;padding:3px 8px;border-radius:4px;margin-top:2px;display:none;';
+        // Insert after the .map-search row (as a sibling, not a child)
+        searchRow.parentNode.insertBefore(apiIndicator, searchRow.nextSibling);
 
         // Show API status after validation completes
         validateGoogleMapsApi().then(valid => {
             if (valid) {
                 apiIndicator.textContent = 'Google Maps: Connected';
-                apiIndicator.style.cssText = 'font-size:0.7rem;padding:4px 10px;border-radius:4px;margin-top:4px;display:block;background:rgba(46,204,113,0.15);color:#2ecc71;';
+                apiIndicator.style.cssText = 'font-size:0.65rem;padding:3px 8px;border-radius:4px;margin-top:2px;display:block;background:rgba(46,204,113,0.12);color:#059669;';
             } else {
-                apiIndicator.innerHTML = 'Google Maps: API not activated — using OpenStreetMap. <a href="https://console.cloud.google.com/apis/library?filter=category:maps" target="_blank" style="color:#FF9F1C;text-decoration:underline;">Enable APIs</a>';
-                apiIndicator.style.cssText = 'font-size:0.7rem;padding:4px 10px;border-radius:4px;margin-top:4px;display:block;background:rgba(255,159,28,0.1);color:#FF9F1C;';
+                apiIndicator.innerHTML = 'Google Maps API not activated — using OpenStreetMap. <a href="https://console.cloud.google.com/apis/library?filter=category:maps" target="_blank" style="color:#D97706;text-decoration:underline;">Enable APIs in Console</a>';
+                apiIndicator.style.cssText = 'font-size:0.65rem;padding:3px 8px;border-radius:4px;margin-top:2px;display:block;background:rgba(217,119,6,0.08);color:#B45309;';
             }
         });
 
