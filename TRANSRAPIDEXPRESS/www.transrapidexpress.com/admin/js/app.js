@@ -1,4 +1,15 @@
-import { supabase } from './supabase-config.js';
+// --- Supabase: Dynamic import so login never breaks if CDN is down ---
+let supabase = null;
+(async () => {
+    try {
+        const module = await import('./supabase-config.js');
+        supabase = module.supabase;
+        console.log('Supabase connected successfully.');
+    } catch (e) {
+        console.warn('Supabase module failed to load. Running in offline/local mode.', e);
+    }
+})();
+
 const ADMIN_HASH = 'edb4c656c930a9681dd2599f9b842b5bfa6548d196c507d4a80c087d4535a580'; // SHA-256 of Pablopablopablo$
 const SESSION_KEY = 'transrapid_admin_auth';
 
