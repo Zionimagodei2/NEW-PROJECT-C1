@@ -35,6 +35,8 @@ let previewMarker = null;
 const markers = [];
 let currentPositionIndex = -1; // -1 means not set; will default to last waypoint
 let destinationIndex = -1; // -1 means not set; will auto-calculate as last stop-type waypoint
+let googleAutocomplete = null; // Google Places Autocomplete instance
+let googlePlacesService = null; // Google Places Service for details
 
 // --- Geocoding Helpers ---
 // Build a readable short location name from Nominatim address object
@@ -63,6 +65,208 @@ function getZoomForType(type) {
         'county': 10, 'state': 7, 'country': 5
     };
     return zoomMap[type] || 14;
+}
+
+// --- Google Maps Geocoding Helpers ---
+// Build a readable location name from a Google Geocoding result
+function buildGoogleLocationName(geoResult) {
+    if (!geoResult || !geoResult.address_components) return geoResult?.formatted_address || 'Unknown Location';
+    const addr = {};
+    geoResult.address_components.forEach(c => { addr[c.types[0]] = c; });
+    const parts = [];
+    // Street address
+    if (addr.street_number && addr.route) parts.push(addr.street_number.short_name + ' ' + addr.route.short_name);
+    else if (addr.route) parts.push(addr.route.short_name);
+    else if (addr.subpremise) parts.push(addr.subpremise.short_name);
+    // City
+    const cityComp = addr.locality || addr.postal_town || addr.administrative_area_level_2 || addr.political;
+    if (cityComp) parts.push(cityComp.short_name || cityComp.long_name);
+    // State/region
+    if (addr.administrative_area_level_1) parts.push(addr.administrative_area_level_1.short_name);
+    // Country
+    if (addr.country) {
+        const cc = addr.country.short_name;
+        if (cc !== 'US') parts.push(addr.country.long_name);
+    }
+    // Postcode
+    if (addr.postal_code) parts.push(addr.postal_code.short_name);
+    return parts.length > 0 ? parts.join(', ') : (geoResult.formatted_address || 'Unknown Location');
+}
+
+// Build a readable location name from a Google Places Autocomplete result
+function buildPlaceLocationName(place) {
+    if (place.name && place.formatted_address) {
+        // Use name + first part of address (usually city)
+        const addrParts = place.formatted_address.split(',');
+        if (addrParts.length > 1) return place.name + ', ' + addrParts.slice(1).join(',').trim();
+        return place.name;
+    }
+    return place.name || place.formatted_address || 'Unknown Location';
+}
+
+// Google Geocoding — returns array of results similar to Nominatim format
+async function googleGeocode(query) {
+    if (!window.google || !window.google.maps) return [];
+    return new Promise((resolve) => {
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ address: query }, (results, status) => {
+            if (status === google.maps.GeocoderStatus.OK && results && results.length > 0) {
+                resolve(results);
+            } else {
+                resolve([]);
+            }
+        });
+    });
+}
+
+// Google Places Autocomplete — returns predictions
+async function googleAutocompleteSearch(query) {
+    if (!window.google || !window.google.maps) return [];
+    return new Promise((resolve) => {
+        const service = new google.maps.places.AutocompleteService();
+        service.getPlacePredictions({ input: query, types: ['geocode', 'establishment'] }, (predictions, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+                resolve(predictions);
+            } else {
+                resolve([]);
+            }
+        });
+    });
+}
+
+// Google Places Details — gets full details including geometry for a place_id
+async function googlePlaceDetails(placeId) {
+    if (!window.google || !window.google.maps || !map) return null;
+    return new Promise((resolve) => {
+        // Create a hidden div for the Places service (it requires a map or div)
+        const service = new google.maps.places.PlacesService(document.createElement('div'));
+        service.getDetails({ placeId: placeId, fields: ['name', 'formatted_address', 'geometry', 'address_components', 'type'] }, (place, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+                resolve(place);
+            } else {
+                resolve(null);
+            }
+        });
+    });
+}
+
+// Show a found location on the map with Add as Stop / Add as Transit buttons
+function showLocationOnMap(lat, lon, locName, zoomLevel) {
+    if (!map) return;
+    map.flyTo([lat, lon], zoomLevel || 16, { duration: 1.5 });
+    if (previewMarker) map.removeLayer(previewMarker);
+    previewMarker = L.marker([lat, lon]).addTo(map);
+    const popupContent = document.createElement('div');
+    popupContent.innerHTML = `<b>${locName}</b><br><small style="color:#8892b0;">${lat.toFixed(4)}, ${lon.toFixed(4)}</small><br>`;
+    const btnRow = document.createElement('div');
+    btnRow.style.marginTop = '8px';
+    btnRow.style.display = 'flex';
+    btnRow.style.gap = '6px';
+    btnRow.style.flexWrap = 'wrap';
+
+    const stopBtn = document.createElement('button');
+    stopBtn.className = 'btn-primary';
+    stopBtn.style.fontSize = '0.8rem';
+    stopBtn.style.padding = '6px 12px';
+    stopBtn.innerHTML = '<i class="fa-solid fa-location-dot"></i> Add as Stop';
+    stopBtn.onclick = () => {
+        waypointsData.push({ lat, lng: lon, name: locName, time: new Date().toLocaleString(), status: waypointsData.length === 0 ? "Shipment Started" : "Transit Update", stopType: 'stop' });
+        currentPositionIndex = waypointsData.length - 1;
+        map.removeLayer(previewMarker); previewMarker = null;
+        updateMapDrawings();
+    };
+
+    const transitBtn = document.createElement('button');
+    transitBtn.className = 'btn-outline';
+    transitBtn.style.fontSize = '0.8rem';
+    transitBtn.style.padding = '6px 12px';
+    transitBtn.innerHTML = '<i class="fa-solid fa-circle" style="font-size:0.5rem;"></i> Add as Transit';
+    transitBtn.onclick = () => {
+        waypointsData.push({ lat, lng: lon, name: locName, time: new Date().toLocaleString(), status: "In transit", stopType: 'transit' });
+        map.removeLayer(previewMarker); previewMarker = null;
+        updateMapDrawings();
+    };
+
+    btnRow.appendChild(stopBtn);
+    btnRow.appendChild(transitBtn);
+    popupContent.appendChild(btnRow);
+    previewMarker.bindPopup(popupContent).openPopup();
+}
+
+// Show Google search results in dropdown (same UI style as Nominatim results)
+function showGoogleSearchResults(results, searchBtn) {
+    const existing = document.getElementById('searchResultsDropdown');
+    if (existing) existing.remove();
+
+    const dropdown = document.createElement('div');
+    dropdown.id = 'searchResultsDropdown';
+    dropdown.style.cssText = 'position:absolute;z-index:10000;background:rgba(15,23,42,0.95);backdrop-filter:blur(8px);border:1px solid rgba(255,159,28,0.4);border-radius:10px;max-height:320px;overflow-y:auto;width:100%;margin-top:4px;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
+
+    const searchInput = document.getElementById('mapSearchInput');
+    const searchContainer = searchInput.parentElement;
+    searchContainer.style.position = 'relative';
+    searchContainer.appendChild(dropdown);
+
+    results.forEach((item, index) => {
+        const isGeocode = item.geometry; // Google Geocode result vs Autocomplete prediction
+        const locName = isGeocode ? buildGoogleLocationName(item) : item.description;
+        const typeName = isGeocode ? (item.types ? item.types[0] : '') : (item.types ? item.types[0] : '');
+
+        let lat, lon;
+        if (isGeocode && item.geometry && item.geometry.location) {
+            lat = typeof item.geometry.location.lat === 'function' ? item.geometry.location.lat() : item.geometry.location.lat;
+            lon = typeof item.geometry.location.lng === 'function' ? item.geometry.location.lng() : item.geometry.location.lng;
+        }
+
+        const el = document.createElement('div');
+        el.style.cssText = 'padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.15s;display:flex;align-items:center;gap:10px;';
+        el.onmouseover = () => el.style.background = 'rgba(255,159,28,0.15)';
+        el.onmouseout = () => el.style.background = 'transparent';
+
+        const icon = document.createElement('span');
+        icon.style.cssText = 'color:#FF9F1C;font-size:0.85rem;min-width:20px;';
+        icon.innerHTML = '<i class="fa-solid fa-location-dot"></i>';
+
+        const textDiv = document.createElement('div');
+        const nameShort = locName.split(',').slice(0, 2).join(',');
+        const nameFull = locName;
+        textDiv.innerHTML = `<div style="font-size:0.85rem;font-weight:500;color:#fff;">${nameShort}</div><div style="font-size:0.7rem;color:#8892b0;">${nameFull} <span style="color:rgba(255,159,28,0.6);text-transform:uppercase;font-size:0.6rem;">${typeName}</span></div>`;
+
+        el.appendChild(icon);
+        el.appendChild(textDiv);
+
+        el.onclick = async () => {
+            dropdown.remove();
+            if (isGeocode && lat !== undefined) {
+                // Direct geocode result — show on map
+                showLocationOnMap(lat, lon, locName, 16);
+            } else if (item.place_id) {
+                // Autocomplete prediction — fetch details first
+                const place = await googlePlaceDetails(item.place_id);
+                if (place && place.geometry && place.geometry.location) {
+                    const pLat = typeof place.geometry.location.lat === 'function' ? place.geometry.location.lat() : place.geometry.location.lat;
+                    const pLon = typeof place.geometry.location.lng === 'function' ? place.geometry.location.lng() : place.geometry.location.lng;
+                    const pName = buildPlaceLocationName(place);
+                    showLocationOnMap(pLat, pLon, pName, 16);
+                } else {
+                    alert('Could not get details for this location. Try the search button instead.');
+                }
+            }
+        };
+
+        dropdown.appendChild(el);
+    });
+
+    // Close dropdown when clicking outside
+    setTimeout(() => {
+        const closeHandler = (e) => {
+            if (!dropdown.contains(e.target) && e.target !== document.getElementById('mapSearchInput')) {
+                dropdown.remove();
+                document.removeEventListener('click', closeHandler);
+            }
+        };
+        document.addEventListener('click', closeHandler);
+    }, 100);
 }
 
 // --- Security Helpers ---
@@ -421,15 +625,49 @@ function setupMap() {
         maxZoom: 19
     }).addTo(map);
 
-    // Map Search
+    // Map Search — Google Maps primary, Nominatim fallback
     const searchBtn = document.getElementById('mapSearchBtn');
     const searchInput = document.getElementById('mapSearchInput');
     if (searchBtn && searchInput) {
-        // Allow Enter key to search
+
+        // --- Google Places Autocomplete on the search input ---
+        // Shows real-time suggestions as the user types
+        try {
+            if (window.google && window.google.maps && google.maps.places) {
+                googleAutocomplete = new google.maps.places.Autocomplete(searchInput, {
+                    fields: ['name', 'formatted_address', 'geometry', 'address_components'],
+                    types: ['geocode', 'establishment']
+                });
+                googleAutocomplete.addListener('place_changed', () => {
+                    const place = googleAutocomplete.getPlace();
+                    if (place && place.geometry && place.geometry.location) {
+                        const lat = typeof place.geometry.location.lat === 'function' ? place.geometry.location.lat() : place.geometry.location.lat;
+                        const lon = typeof place.geometry.location.lng === 'function' ? place.geometry.location.lng() : place.geometry.location.lng;
+                        const locName = buildPlaceLocationName(place);
+                        showLocationOnMap(lat, lon, locName, 16);
+                    }
+                });
+                console.log('Google Places Autocomplete initialized.');
+            }
+        } catch(e) {
+            console.warn('Google Places Autocomplete failed to initialize:', e);
+        }
+
+        // Allow Enter key to search (but don't trigger if autocomplete is handling it)
         searchInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') { e.preventDefault(); searchBtn.click(); }
+            if (e.key === 'Enter') {
+                // Small delay to let autocomplete handle it first
+                setTimeout(() => {
+                    // If no autocomplete popup is visible, trigger manual search
+                    const pacContainer = document.querySelector('.pac-container');
+                    if (!pacContainer || pacContainer.style.display === 'none' || !pacContainer.offsetParent) {
+                        searchBtn.click();
+                    }
+                }, 300);
+            }
         });
 
+        // --- Search Button: Google Geocoding first, then Nominatim fallback ---
         searchBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             const query = searchInput.value.trim();
@@ -437,133 +675,43 @@ function setupMap() {
             searchBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             searchBtn.disabled = true;
             try {
-                // Common request headers — Nominatim requires a User-Agent per their usage policy
+                // ========= STRATEGY 1: Google Geocoding API =========
+                let googleResults = await googleGeocode(query);
+
+                if (googleResults && googleResults.length > 0) {
+                    if (googleResults.length === 1) {
+                        // Single result — show directly on map
+                        const result = googleResults[0];
+                        const lat = typeof result.geometry.location.lat === 'function' ? result.geometry.location.lat() : result.geometry.location.lat;
+                        const lon = typeof result.geometry.location.lng === 'function' ? result.geometry.location.lng() : result.geometry.location.lng;
+                        const locName = buildGoogleLocationName(result);
+                        showLocationOnMap(lat, lon, locName, 16);
+                        return; // Done — no need for Nominatim
+                    } else {
+                        // Multiple results — show dropdown
+                        showGoogleSearchResults(googleResults, searchBtn);
+                        return; // Done
+                    }
+                }
+
+                // ========= STRATEGY 2: Google Places Autocomplete predictions =========
+                // If geocoding found nothing, try autocomplete predictions for partial matches
+                let predictions = await googleAutocompleteSearch(query);
+                if (predictions && predictions.length > 0) {
+                    showGoogleSearchResults(predictions, searchBtn);
+                    return; // Done
+                }
+
+                // ========= STRATEGY 3: Nominatim fallback =========
+                // If Google found nothing, fall back to Nominatim (OpenStreetMap)
                 const headers = {
                     'Accept-Language': 'en',
                     'User-Agent': 'TransrapidExpressAdmin/1.0'
                 };
-
-                // Small delay helper to respect Nominatim rate limit (1 req/sec)
                 const delay = ms => new Promise(r => setTimeout(r, ms));
-
                 let data = [];
 
-                // Detect country codes from the query for targeted searches
-                // Complete world country list — every recognized country mapped to ISO 3166-1 alpha-2
-                const countryMap = {
-                    // Europe
-                    'UK': 'gb', 'UNITED KINGDOM': 'gb', 'GREAT BRITAIN': 'gb', 'ENGLAND': 'gb', 'SCOTLAND': 'gb', 'WALES': 'gb', 'NORTHERN IRELAND': 'gb',
-                    'IRELAND': 'ie', 'REPUBLIC OF IRELAND': 'ie',
-                    'FRANCE': 'fr', 'GERMANY': 'de', 'ITALY': 'it', 'SPAIN': 'es', 'PORTUGAL': 'pt',
-                    'NETHERLANDS': 'nl', 'HOLLAND': 'nl', 'BELGIUM': 'be', 'LUXEMBOURG': 'lu',
-                    'SWITZERLAND': 'ch', 'AUSTRIA': 'at', 'LIECHTENSTEIN': 'li',
-                    'POLAND': 'pl', 'CZECH REPUBLIC': 'cz', 'CZECHIA': 'cz', 'SLOVAKIA': 'sk',
-                    'HUNGARY': 'hu', 'ROMANIA': 'ro', 'BULGARIA': 'bg',
-                    'SWEDEN': 'se', 'NORWAY': 'no', 'DENMARK': 'dk', 'FINLAND': 'fi', 'ICELAND': 'is',
-                    'ESTONIA': 'ee', 'LATVIA': 'lv', 'LITHUANIA': 'lt',
-                    'GREECE': 'gr', 'CYPRUS': 'cy', 'MALTA': 'mt',
-                    'SLOVENIA': 'si', 'CROATIA': 'hr', 'SERBIA': 'rs', 'BOSNIA': 'ba', 'BOSNIA AND HERZEGOVINA': 'ba',
-                    'MONTENEGRO': 'me', 'NORTH MACEDONIA': 'mk', 'MACEDONIA': 'mk', 'ALBANIA': 'al',
-                    'KOSOVO': 'xk', 'MOLDOVA': 'md', 'BELARUS': 'by', 'UKRAINE': 'ua',
-                    'RUSSIA': 'ru', 'RUSSIAN FEDERATION': 'ru',
-                    'ANDORRA': 'ad', 'MONACO': 'mc', 'SAN MARINO': 'sm', 'VATICAN': 'va', 'VATICAN CITY': 'va',
-                    'FAROE ISLANDS': 'fo', 'GIBRALTAR': 'gi', 'GUERNSEY': 'gg', 'JERSEY': 'je', 'ISLE OF MAN': 'im',
-                    'SVALBARD': 'sj',
-                    // North America
-                    'USA': 'us', 'UNITED STATES': 'us', 'UNITED STATES OF AMERICA': 'us', 'AMERICA': 'us',
-                    'CANADA': 'ca', 'MEXICO': 'mx',
-                    'GUATEMALA': 'gt', 'BELIZE': 'bz', 'HONDURAS': 'hn', 'EL SALVADOR': 'sv',
-                    'NICARAGUA': 'ni', 'COSTA RICA': 'cr', 'PANAMA': 'pa',
-                    'CUBA': 'cu', 'JAMAICA': 'jm', 'HAITI': 'ht', 'DOMINICAN REPUBLIC': 'do',
-                    'TRINIDAD': 'tt', 'TRINIDAD AND TOBAGO': 'tt', 'TOBAGO': 'tt',
-                    'BAHAMAS': 'bs', 'BARBADOS': 'bb', 'GRENADA': 'gd', 'DOMINICA': 'dm',
-                    'SAINT LUCIA': 'lc', 'SAINT VINCENT': 'vc', 'ANTIGUA': 'ag', 'ANTIGUA AND BARBUDA': 'ag',
-                    'SAINT KITTS': 'kn', 'SAINT KITTS AND NEVIS': 'kn',
-                    'PUERTO RICO': 'pr', 'GREENLAND': 'gl', 'BERMUDA': 'bm', 'CAYMAN ISLANDS': 'ky',
-                    'BRITISH VIRGIN ISLANDS': 'vg', 'US VIRGIN ISLANDS': 'vi',
-                    'TURKS AND CAICOS': 'tc', 'ANGUILLA': 'ai', 'MONTSERRAT': 'ms',
-                    'ARUBA': 'aw', 'CURACAO': 'cw', 'SINT MAARTEN': 'sx',
-                    // South America
-                    'BRAZIL': 'br', 'ARGENTINA': 'ar', 'CHILE': 'cl', 'COLOMBIA': 'co',
-                    'PERU': 'pe', 'VENEZUELA': 've', 'ECUADOR': 'ec', 'BOLIVIA': 'bo',
-                    'PARAGUAY': 'py', 'URUGUAY': 'uy', 'GUYANA': 'gy', 'SURINAME': 'sr',
-                    'FALKLAND ISLANDS': 'fk', 'FRENCH GUIANA': 'gf',
-                    // Asia
-                    'CHINA': 'cn', 'JAPAN': 'jp', 'SOUTH KOREA': 'kr', 'KOREA': 'kr',
-                    'NORTH KOREA': 'kp', 'TAIWAN': 'tw',
-                    'INDIA': 'in', 'PAKISTAN': 'pk', 'BANGLADESH': 'bd', 'SRI LANKA': 'lk',
-                    'NEPAL': 'np', 'BHUTAN': 'bt', 'MALDIVES': 'mv',
-                    'THAILAND': 'th', 'VIETNAM': 'vn', 'CAMBODIA': 'kh', 'LAOS': 'la', 'MYANMAR': 'mm', 'BURMA': 'mm',
-                    'MALAYSIA': 'my', 'SINGAPORE': 'sg', 'INDONESIA': 'id', 'PHILIPPINES': 'ph',
-                    'BRUNEI': 'bn', 'EAST TIMOR': 'tl', 'TIMOR-LESTE': 'tl',
-                    'MONGOLIA': 'mn', 'KAZAKHSTAN': 'kz', 'UZBEKISTAN': 'uz', 'TURKMENISTAN': 'tm',
-                    'TAJIKISTAN': 'tj', 'KYRGYZSTAN': 'kg', 'AFGHANISTAN': 'af',
-                    // Middle East
-                    'TURKEY': 'tr', 'TURKIYE': 'tr', 'IRAN': 'ir', 'IRAQ': 'iq',
-                    'SYRIA': 'sy', 'JORDAN': 'jo', 'LEBANON': 'lb', 'ISRAEL': 'il',
-                    'PALESTINE': 'ps', 'SAUDI ARABIA': 'sa', 'SAUDI': 'sa',
-                    'UAE': 'ae', 'UNITED ARAB EMIRATES': 'ae', 'DUBAI': 'ae', 'ABU DHABI': 'ae',
-                    'QATAR': 'qa', 'BAHRAIN': 'bh', 'KUWAIT': 'kw', 'OMAN': 'om',
-                    'YEMEN': 'ye', 'GEORGIA': 'ge', 'ARMENIA': 'am', 'AZERBAIJAN': 'az',
-                    // Africa
-                    'EGYPT': 'eg', 'LIBYA': 'ly', 'TUNISIA': 'tn', 'ALGERIA': 'dz', 'MOROCCO': 'ma',
-                    'SUDAN': 'sd', 'SOUTH SUDAN': 'ss', 'ETHIOPIA': 'et', 'ERITREA': 'er',
-                    'DJIBOUTI': 'dj', 'SOMALIA': 'so', 'KENYA': 'ke', 'UGANDA': 'ug',
-                    'TANZANIA': 'tz', 'RWANDA': 'rw', 'BURUNDI': 'bi',
-                    'DEMOCRATIC REPUBLIC OF CONGO': 'cd', 'CONGO': 'cg', 'REPUBLIC OF CONGO': 'cg',
-                    'CENTRAL AFRICAN REPUBLIC': 'cf', 'CAMEROON': 'cm', 'GABON': 'ga',
-                    'EQUATORIAL GUINEA': 'gq', 'SAO TOME': 'st', 'CHAD': 'td', 'NIGER': 'ne',
-                    'NIGERIA': 'ng', 'GHANA': 'gh', 'IVORY COAST': 'ci', 'COTE D\'IVOIRE': 'ci',
-                    'SENEGAL': 'sn', 'GAMBIA': 'gm', 'GUINEA': 'gn', 'GUINEA-BISSAU': 'gw',
-                    'SIERRA LEONE': 'sl', 'LIBERIA': 'lr', 'MAURITANIA': 'mr', 'MALI': 'ml',
-                    'BURKINA FASO': 'bf', 'CAPE VERDE': 'cv', 'CABO VERDE': 'cv',
-                    'BENIN': 'bj', 'TOGO': 'tg',
-                    'SOUTH AFRICA': 'za', 'NAMIBIA': 'na', 'BOTSWANA': 'bw', 'ZIMBABWE': 'zw',
-                    'ZAMBIA': 'zm', 'MALAWI': 'mw', 'MOZAMBIQUE': 'mz', 'MADAGASCAR': 'mg',
-                    'COMOROS': 'km', 'MAURITIUS': 'mu', 'SEYCHELLES': 'sc',
-                    'ANGOLA': 'ao', 'ESWATINI': 'sz', 'SWAZILAND': 'sz', 'LESOTHO': 'ls',
-                    'WESTERN SAHARA': 'eh', 'REUNION': 're', 'MAYOTTE': 'yt',
-                    'SAINT HELENA': 'sh', 'SAO TOME AND PRINCIPE': 'st',
-                    // Oceania
-                    'AUSTRALIA': 'au', 'NEW ZEALAND': 'nz', 'PAPUA NEW GUINEA': 'pg',
-                    'FIJI': 'fj', 'SOLOMON ISLANDS': 'sb', 'VANUATU': 'vu',
-                    'SAMOA': 'ws', 'TONGA': 'to', 'KIRIBATI': 'ki', 'TUVALU': 'tv',
-                    'NAURU': 'nr', 'PALAU': 'pw', 'MARSHALL ISLANDS': 'mh',
-                    'MICRONESIA': 'fm', 'NEW CALEDONIA': 'nc', 'FRENCH POLYNESIA': 'pf',
-                    'GUAM': 'gu', 'NORTHERN MARIANA ISLANDS': 'mp',
-                    'AMERICAN SAMOA': 'as', 'COOK ISLANDS': 'ck', 'NIUE': 'nu',
-                    'TOKELAU': 'tk', 'WALLIS AND FUTUNA': 'wf', 'TUVALU': 'tv',
-                    'NORFOLK ISLAND': 'nf', 'CHRISTMAS ISLAND': 'cx', 'COCOS ISLANDS': 'cc',
-                    'HEARD ISLAND': 'hm', 'PICTAIRN': 'pn',
-                    // Common alternate names
-                    'HOLLAND': 'nl', 'CEYLON': 'lk', 'BURMA': 'mm', 'SIAM': 'th',
-                    'PERSIA': 'ir', 'MESOPOTAMIA': 'iq', 'CZECHOSLOVAKIA': 'cz',
-                    'YUGOSLAVIA': 'rs', 'TIBET': 'cn', 'FORMOSA': 'tw',
-                    'IVORY COAST': 'ci', 'DAHOMEY': 'bj', 'UPPER VOLTA': 'bf',
-                    'GOLD COAST': 'gh', 'RHODESIA': 'zw', 'NYASALAND': 'mw',
-                    'BECHUANALAND': 'bw', 'SOUTHWEST AFRICA': 'na', 'TANGANYIKA': 'tz',
-                    'ZANZIBAR': 'tz'
-                };
-                const usStates = /\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC)\b/i;
-
-                // Detect country from query
-                let detectedCC = null;
-                const upperQuery = query.toUpperCase();
-                for (const [keyword, cc] of Object.entries(countryMap)) {
-                    if (upperQuery.includes(keyword)) { detectedCC = cc; break; }
-                }
-                // Also detect UK postcodes (e.g., BT19 6XD, SW1A 1AA)
-                const ukPostcodeRegex = /\b([A-Z]{1,2}\d{1,2}[A-Z]?\s+\d[A-Z]{2})\b/i;
-                let detectedPostcode = null;
-                const pcMatch = query.match(ukPostcodeRegex);
-                if (pcMatch) { detectedCC = 'gb'; detectedPostcode = pcMatch[1]; }
-                // Detect US ZIP codes (5 digit)
-                if (!detectedCC && /\b\d{5}(?:-\d{4})?\b/.test(query)) detectedCC = 'us';
-                // Detect Canadian postal codes (e.g., K1A 0B1)
-                if (!detectedCC && /\b[A-Z]\d[A-Z]\s+\d[A-Z]\d\b/i.test(query)) detectedCC = 'ca';
-
-                // --- Address abbreviation expansion ---
-                // Common UK/international address abbreviations → full forms
+                // Address abbreviation expansion
                 const abbreviations = {
                     'CRES': 'Crescent', 'CR': 'Crescent',
                     'RD': 'Road', 'Rd': 'Road',
@@ -582,205 +730,59 @@ function setupMap() {
                     'BLVD': 'Boulevard', 'BVLD': 'Boulevard',
                     'HWY': 'Highway', 'HIWAY': 'Highway',
                     'FWY': 'Freeway', 'EXPY': 'Expressway',
-                    'TRL': 'Trail', 'PATH': 'Path',
-                    'WAY': 'Way',
-                    'CIR': 'Circle',
-                    'PKE': 'Pike',
-                    'EST': 'Estate', 'ESTS': 'Estates',
-                    'GRN': 'Green',
-                    'HILL': 'Hill',
-                    'VW': 'View',
-                    'WK': 'Walk',
-                    'YD': 'Yard',
-                    'BY': 'Bypass',
-                    'BRG': 'Bridge',
-                    'PDE': 'Parade',
-                    'QY': 'Quay',
-                    'WYND': 'Wynd'
+                    'CIR': 'Circle', 'WAY': 'Way'
                 };
-
-                // Expand abbreviations in the query — e.g., "Belgravia Cres" → "Belgravia Crescent"
                 function expandAbbreviations(q) {
                     let expanded = q;
                     for (const [abbr, full] of Object.entries(abbreviations)) {
-                        // Match abbreviation as a whole word (case-sensitive for short ones to avoid false positives)
                         const regex = new RegExp('\\b' + abbr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
                         expanded = expanded.replace(regex, full);
                     }
                     return expanded;
                 }
-
                 const expandedQuery = expandAbbreviations(query);
 
-                // --- Parse address components for structured search ---
-                // Extract postcode, street, city from comma-separated query
-                let parsedStreet = null, parsedCity = null, parsedState = null, parsedCountry = null, parsedPostcode = null;
+                // UK postcode detection
+                const ukPostcodeRegex = /\b([A-Z]{1,2}\d{1,2}[A-Z]?\s+\d[A-Z]{2})\b/i;
+                let detectedCC = null;
+                let detectedPostcode = null;
+                const pcMatch = query.match(ukPostcodeRegex);
+                if (pcMatch) { detectedCC = 'gb'; detectedPostcode = pcMatch[1]; }
+                if (!detectedCC && /\b\d{5}(?:-\d{4})?\b/.test(query)) detectedCC = 'us';
 
-                if (query.includes(',')) {
-                    const parts = query.split(',').map(p => p.trim());
-                    // Remove house number from street part if present
-                    parsedStreet = parts[0] ? expandAbbreviations(parts[0].replace(/^\d+\s+/, '').trim()) : null;
-                    // Check if parts contain postcode
-                    for (let pi = 1; pi < parts.length; pi++) {
-                        const part = parts[pi].trim();
-                        if (ukPostcodeRegex.test(part) && !parsedPostcode) {
-                            parsedPostcode = part.match(ukPostcodeRegex)[1];
-                            // If the part is ONLY a postcode, or city+postcode, extract city
-                            const cityPart = part.replace(ukPostcodeRegex, '').trim();
-                            if (cityPart && !parsedCity) parsedCity = cityPart;
-                        } else if (!parsedCity) {
-                            parsedCity = part;
-                        } else if (!parsedState) {
-                            parsedState = part;
-                        } else if (!parsedCountry) {
-                            parsedCountry = part;
-                        }
-                    }
-                    // If no postcode was found in parts, use detectedPostcode
-                    if (!parsedPostcode && detectedPostcode) parsedPostcode = detectedPostcode;
-                } else {
-                    // No commas — try to extract components from the query
-                    parsedPostcode = detectedPostcode;
-                }
-
-                // --- Extract partial street name for broader fallback ---
-                // e.g., "2 Belgravia Cres" → "Belgravia" (just the root name)
-                function extractStreetRoot(streetPart) {
-                    if (!streetPart) return null;
-                    // Remove house number
-                    let cleaned = streetPart.replace(/^\d+\s+/, '').trim();
-                    // Remove common suffixes
-                    const suffixes = ['Crescent', 'Road', 'Street', 'Avenue', 'Lane', 'Drive', 'Place', 'Court', 'Square', 'Terrace', 'Park', 'Close', 'Gardens', 'Garden', 'Mews', 'Boulevard', 'Highway', 'Way', 'Circle', 'Terrace', 'Green', 'Hill', 'View', 'Walk'];
-                    for (const s of suffixes) {
-                        if (cleaned.endsWith(' ' + s)) {
-                            return cleaned.replace(new RegExp(' ' + s + '$', 'i'), '').trim();
-                        }
-                    }
-                    // Also check abbreviated forms
-                    for (const [abbr] of Object.entries(abbreviations)) {
-                        if (cleaned.endsWith(' ' + abbr)) {
-                            return cleaned.replace(new RegExp(' ' + abbr + '$', 'i'), '').trim();
-                        }
-                    }
-                    return cleaned || null;
-                }
-
-                const streetRoot = extractStreetRoot(parsedStreet || (query.includes(',') ? query.split(',')[0].trim() : query));
-
-                // Build search strategies — ordered from most specific to broadest with smart fallbacks
+                // Build minimal Nominatim strategies (Google already tried the main query)
                 const searchStrategies = [
-                    // Strategy 1: Full search with expanded abbreviations (Cres → Crescent)
-                    expandedQuery !== query ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&extratags=1&q=${encodeURIComponent(expandedQuery)}` : null,
-
-                    // Strategy 2: Full search with original query
-                    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&extratags=1&q=${encodeURIComponent(query)}`,
-
-                    // Strategy 3: Simpler search without extratags
-                    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&q=${encodeURIComponent(expandedQuery !== query ? expandedQuery : query)}`,
-
-                    // Strategy 4: With detected country code for targeted results
-                    detectedCC ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=${detectedCC}&q=${encodeURIComponent(expandedQuery !== query ? expandedQuery : query)}` : null,
-
-                    // Strategy 5: US-specific if US state abbreviation detected
-                    usStates.test(query) ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=us&q=${encodeURIComponent(query)}` : null,
-
-                    // Strategy 6: Structured search with proper postcode handling
-                    (query.includes(',')) ? (() => {
-                        const params = new URLSearchParams({ format: 'json', addressdetails: '1', limit: '15', dedupe: '1' });
-                        if (parsedStreet) params.set('street', parsedStreet);
-                        if (parsedCity) params.set('city', parsedCity);
-                        if (parsedState) params.set('state', parsedState);
-                        if (parsedPostcode) params.set('postalcode', parsedPostcode);
-                        if (detectedCC) params.set('countrycodes', detectedCC);
-                        return `https://nominatim.openstreetmap.org/search?${params.toString()}`;
-                    })() : null,
-
-                    // Strategy 7: Structured search without street (city + postcode only) — for when OSM doesn't have the street
-                    (parsedCity && parsedPostcode) ? (() => {
-                        const params = new URLSearchParams({ format: 'json', addressdetails: '1', limit: '15', dedupe: '1' });
-                        params.set('city', parsedCity);
-                        params.set('postalcode', parsedPostcode);
-                        if (detectedCC) params.set('countrycodes', detectedCC);
-                        return `https://nominatim.openstreetmap.org/search?${params.toString()}`;
-                    })() : null,
-
-                    // Strategy 8: Partial street name + city/country (e.g., "Belgravia" + "Bangor" + country code)
-                    // This catches nearby streets when the exact one isn't mapped in OSM
-                    (streetRoot && parsedCity) ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=${detectedCC || ''}&q=${encodeURIComponent(streetRoot + ' ' + parsedCity)}` : null,
-
-                    // Strategy 9: Partial street name + country code only (broader area search)
-                    (streetRoot && detectedCC) ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=${detectedCC}&q=${encodeURIComponent(streetRoot)}` : null,
-
-                    // Strategy 10: Try with normalized query (remove special chars, extra spaces)
+                    // With expanded abbreviations
+                    expandedQuery !== query ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&q=${encodeURIComponent(expandedQuery)}` : null,
+                    // With country code
+                    detectedCC ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=${detectedCC}&q=${encodeURIComponent(query)}` : null,
+                    // Normalized query
                     `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&q=${encodeURIComponent(query.replace(/[,\.\-#\/]/g, ' ').replace(/\s+/g, ' ').trim())}`,
-
-                    // Strategy 11: Just the postcode area (e.g., "BT19" district)
-                    detectedPostcode ? (() => {
-                        const outcode = detectedPostcode.split(/\s/)[0]; // e.g., "BT19" from "BT19 6XD"
-                        return `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=gb&q=${encodeURIComponent(outcode)}`;
-                    })() : null,
-
-                    // Strategy 12: City only + country code
-                    parsedCity ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=${detectedCC || ''}&q=${encodeURIComponent(parsedCity)}` : null,
-
-                    // Strategy 13: Short query as settlement/locality
-                    (query.split(/\s+/).length <= 2) ? `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&featuretype=settlement&q=${encodeURIComponent(query)}` : null,
-
-                    // Strategy 14: Common misspelling variants (OSM data quality varies)
-                    // e.g., "Crescent" → also try "Cresent" (common OSM typo)
-                    (() => {
-                        let typoQuery = expandedQuery !== query ? expandedQuery : query;
-                        const typoMap = [
-                            ['Crescent', 'Cresent'], ['Crescent', 'Cresant'],
-                            ['Avenue', 'Aveneu'], ['Boulevard', 'Boulavard'],
-                            ['Terrace', 'Terace'], ['Gardens', 'Gardins']
-                        ];
-                        for (const [correct, typo] of typoMap) {
-                            if (typoQuery.includes(correct)) {
-                                typoQuery = typoQuery.replace(correct, typo);
-                                break; // Only apply one typo variant at a time
-                            }
-                        }
-                        return (typoQuery !== (expandedQuery !== query ? expandedQuery : query)) ?
-                            `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&dedupe=1&countrycodes=${detectedCC || ''}&q=${encodeURIComponent(typoQuery)}` : null;
-                    })(),
-
-                    // Strategy 15: Broadest possible search — no dedupe, higher limit
+                    // Broadest search
                     `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=25&q=${encodeURIComponent(expandedQuery !== query ? expandedQuery : query)}`
                 ].filter(Boolean);
 
-                // Execute strategies sequentially with delays, collect ALL results
                 let allResults = [];
-                let foundExactMatch = false;
                 for (let si = 0; si < searchStrategies.length; si++) {
                     try {
-                        if (si > 0) await delay(1100); // Respect 1 req/sec rate limit
+                        if (si > 0) await delay(1100);
                         const res = await fetch(searchStrategies[si], { headers });
                         if (!res.ok) continue;
                         const results = await res.json();
                         if (results && results.length > 0) {
-                            // Deduplicate by place_id across strategies
                             for (const r of results) {
                                 if (!allResults.some(existing => existing.place_id === r.place_id)) {
                                     allResults.push(r);
                                 }
                             }
-                            // Fast path: if the first 2 strategies (specific searches) found results, use them directly
-                            if (si <= 1 && results.length > 0) { foundExactMatch = true; break; }
-                            // If we found results from strategies 3-6 (country-targeted or structured), they're good enough
-                            if (si <= 6 && results.length > 0) break;
-                            // If we've accumulated enough results from broader searches, stop searching
-                            if (allResults.length >= 5) break;
+                            if (allResults.length >= 3) break;
                         }
                     } catch(e) { continue; }
                 }
 
-                // Reuse the data variable declared above — just assign allResults
-                // (was 'const data = allResults' which caused SyntaxError: duplicate declaration)
                 data = allResults;
 
                 if (data && data.length > 0) {
-                    // Show dropdown for multiple results
                     if (data.length > 1) {
                         showSearchResults(data, searchBtn);
                         return;
@@ -789,70 +791,10 @@ function setupMap() {
                     const lat = parseFloat(result.lat);
                     const lon = parseFloat(result.lon);
                     const zoom = getZoomForType(result.type) || getZoomForType(result.class) || 16;
-                    map.flyTo([lat, lon], zoom, { duration: 1.5 });
-                    // Show a preview marker at the found location with a Confirm Stop button
-                    if(previewMarker) map.removeLayer(previewMarker);
-                    previewMarker = L.marker([lat, lon]).addTo(map);
                     const locName = buildLocationName(result.address, result.display_name);
-                    const popupContent = document.createElement('div');
-                    popupContent.innerHTML = `<b>${locName}</b><br><small style="color:#8892b0;">${lat.toFixed(4)}, ${lon.toFixed(4)}</small><br>`;
-                    // Two confirm buttons: one for Stop (bold), one for Transit (subtle)
-                    const btnRow = document.createElement('div');
-                    btnRow.style.marginTop = '8px';
-                    btnRow.style.display = 'flex';
-                    btnRow.style.gap = '6px';
-                    btnRow.style.flexWrap = 'wrap';
-
-                    const stopBtn = document.createElement('button');
-                    stopBtn.className = 'btn-primary';
-                    stopBtn.style.fontSize = '0.8rem';
-                    stopBtn.style.padding = '6px 12px';
-                    stopBtn.innerHTML = '<i class="fa-solid fa-location-dot"></i> Add as Stop';
-                    stopBtn.onclick = () => {
-                        waypointsData.push({
-                            lat, lng: lon,
-                            name: locName,
-                            time: new Date().toLocaleString(),
-                            status: waypointsData.length === 0 ? "Shipment Started" : "Transit Update",
-                            stopType: 'stop'
-                        });
-                        currentPositionIndex = waypointsData.length - 1;
-                        map.removeLayer(previewMarker);
-                        previewMarker = null;
-                        updateMapDrawings();
-                    };
-
-                    const transitBtn = document.createElement('button');
-                    transitBtn.className = 'btn-outline';
-                    transitBtn.style.fontSize = '0.8rem';
-                    transitBtn.style.padding = '6px 12px';
-                    transitBtn.innerHTML = '<i class="fa-solid fa-circle" style="font-size:0.5rem;"></i> Add as Transit';
-                    transitBtn.onclick = () => {
-                        waypointsData.push({
-                            lat, lng: lon,
-                            name: locName,
-                            time: new Date().toLocaleString(),
-                            status: "In transit",
-                            stopType: 'transit'
-                        });
-                        // Don't move current position to a transit point
-                        map.removeLayer(previewMarker);
-                        previewMarker = null;
-                        updateMapDrawings();
-                    };
-
-                    btnRow.appendChild(stopBtn);
-                    btnRow.appendChild(transitBtn);
-                    popupContent.appendChild(btnRow);
-                    previewMarker.bindPopup(popupContent).openPopup();
+                    showLocationOnMap(lat, lon, locName, zoom);
                 } else {
-                    let tipMsg = 'Location not found after multiple search attempts. Try:\n';
-                    tipMsg += '\u2022 Expand abbreviations (e.g., "Cres" \u2192 "Crescent", "Rd" \u2192 "Road")\n';
-                    tipMsg += '\u2022 Try without house number (e.g., "Belgravia Crescent, Bangor, UK")\n';
-                    tipMsg += '\u2022 Use just the street area (e.g., "Belgravia, Bangor, UK")\n';
-                    tipMsg += '\u2022 Use the city + postcode (e.g., "Bangor BT19, UK")\n';
-                    tipMsg += '\u2022 Or click directly on the map to place a point';
-                    alert(tipMsg);
+                    alert('Location not found. Try:\n\u2022 Be more specific with the full address\n\u2022 Include the city and country\n\u2022 Or click directly on the map to place a point');
                 }
             } catch(err) {
                 console.error(err);
