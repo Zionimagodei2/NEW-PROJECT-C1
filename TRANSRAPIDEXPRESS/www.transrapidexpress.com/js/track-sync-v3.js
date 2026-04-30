@@ -29,37 +29,37 @@ if (isTrackPage) {
             max-width: 800px;
             margin: 2rem auto;
             padding: 0 1rem;
-            color: #1A1D26;
+            color: white;
             display: none;
         }
         .track-result-container.active {
             display: block;
         }
         .result-header {
-            border-bottom: 1px solid rgba(0,0,0,0.08);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
             padding-bottom: 1.5rem;
             margin-bottom: 1.5rem;
         }
         .status-card {
-            background: rgba(0,0,0,0.02);
+            background: rgba(255,255,255,0.05);
             padding: 1.5rem;
             border-radius: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border: 1px solid rgba(217,119,6,0.3);
+            border: 1px solid rgba(255,159,28,0.3);
         }
         .status-badge { color: #FF9F1C; font-weight: bold; font-size: 1.25rem; }
         .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
         .info-group { margin-bottom: 1rem; }
-        .info-label { color: #64748b; font-size: 0.85rem; display: block; margin-bottom: 0.2rem; }
+        .info-label { color: #8892b0; font-size: 0.85rem; display: block; margin-bottom: 0.2rem; }
         .info-val { font-weight: 500; }
-        .map-container { height: 400px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(0,0,0,0.08); margin-top: 1rem; }
-        .timeline { margin-top: 2rem; border-left: 2px solid rgba(0,0,0,0.1); padding-left: 1.5rem; }
+        .map-container { height: 480px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin-top: 1rem; }
+        .timeline { margin-top: 2rem; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 1.5rem; }
         .timeline-item { position: relative; margin-bottom: 2rem; }
         .timeline-item::before { content: ''; position: absolute; left: -1.8rem; top: 0; width: 12px; height: 12px; border-radius: 50%; background: #FF9F1C; }
         .timeline-item h4 { color: #FF9F1C; margin-bottom: 0.2rem; }
-        .timeline-date { font-size: 0.8rem; color: #64748b; margin-bottom: 0.5rem; }
+        .timeline-date { font-size: 0.8rem; color: #8892b0; margin-bottom: 0.5rem; }
 
         /* Marker Styles — matching predecessor site */
         .pulse-marker-client {
@@ -86,24 +86,24 @@ if (isTrackPage) {
             border: 1px solid rgba(255,255,255,0.3); transform: translate(-50%, -50%);
         }
         .transit-label-client {
-            background: rgba(255, 255, 255, 0.9) !important;
-            border: 1px solid rgba(0, 0, 0, 0.1) !important;
+            background: rgba(10, 22, 40, 0.6) !important;
+            border: 1px solid rgba(136, 146, 176, 0.3) !important;
             font-size: 0.7rem !important;
             font-weight: 400 !important;
-            color: #546E7A !important;
+            color: #8892b0 !important;
         }
 
         .sophisticated-label {
-            background: rgba(255, 255, 255, 0.95) !important;
+            background: rgba(10, 22, 40, 0.85);
             backdrop-filter: blur(8px);
-            border: 1px solid rgba(0, 0, 0, 0.12) !important;
-            color: #1A1D26 !important;
+            border: 1px solid rgba(255, 159, 28, 0.5);
+            color: #fff;
             font-size: 0.8rem;
             font-weight: 600;
             font-family: inherit;
             padding: 4px 10px;
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
         }
         .sophisticated-label::before { display: none; }
 
@@ -122,7 +122,7 @@ if (isTrackPage) {
             gap: 6px;
             font-size: 0.85rem;
             font-weight: 600;
-            color: #1A1D26;
+            color: #fff;
         }
         .map-legend-dot {
             width: 10px;
@@ -147,7 +147,7 @@ if (isTrackPage) {
             align-items: center;
             gap: 6px;
             font-size: 0.75rem;
-            color: #64748b;
+            color: #94a3b8;
         }
         .route-legend-line {
             width: 24px;
@@ -155,7 +155,7 @@ if (isTrackPage) {
             display: inline-block;
             border-radius: 2px;
         }
-        .route-legend-line.traveled { background: #64B5F6; }
+        .route-legend-line.traveled { background: #3B82F6; }
         .route-legend-line.remaining { background: #78909C; }
 
         /* Success notification banner */
@@ -189,22 +189,22 @@ if (isTrackPage) {
             gap: 8px;
             margin-bottom: 1.5rem;
             padding: 8px 16px;
-            background: rgba(0,0,0,0.04);
-            border: 1px solid rgba(0,0,0,0.1);
-            color: #1A1D26;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
             font-size: 0.85rem;
             transition: background 0.2s;
         }
-        .track-back-btn:hover { background: rgba(0,0,0,0.08); }
+        .track-back-btn:hover { background: rgba(255,255,255,0.2); }
 
         @media (max-width: 768px) {
             .details-grid { grid-template-columns: 1fr; gap: 1rem; }
             .status-card { flex-direction: column; text-align: center; gap: 1rem; }
             .status-card div { text-align: center !important; }
-            .map-container { height: 300px; }
+            .map-container { height: 350px; }
             .map-legend { gap: 1rem; }
         }
     `;
@@ -236,8 +236,8 @@ window.addEventListener('DOMContentLoaded', () => {
             <span>Shipment found. Live tracking loaded.</span>
         </div>
         <div class="result-header">
-            <h2 style="color: #1A1D26; font-size: 1.5rem; font-weight: bold;">SHIPMENT DETAILS</h2>
-            <p style="color: #64748b;">Tracking Code: <strong style="color: #d97706;" id="res-code">--</strong></p>
+            <h2 style="color: #ffffff; font-size: 1.5rem; font-weight: bold;">SHIPMENT DETAILS</h2>
+            <p style="color: #94a3b8;">Tracking Code: <strong style="color: #FF9F1C;" id="res-code">--</strong></p>
         </div>
         <div class="status-card">
             <div>
@@ -249,7 +249,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 <div class="info-val" id="res-date">--</div>
             </div>
         </div>
-        <h3 style="margin: 2rem 0 1rem; color: #1A1D26;">PRODUCT INFORMATION</h3>
+        <h3 style="margin: 2rem 0 1rem; color: #ffffff;">PRODUCT INFORMATION</h3>
         <div class="details-grid">
             <div>
                 <div class="info-group"><span class="info-label">Name</span><span class="info-val" id="res-name">--</span></div>
@@ -265,7 +265,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 <div class="info-group"><span class="info-label">Agency</span><span class="info-val" id="res-agency">--</span></div>
             </div>
         </div>
-        <h3 style="margin: 2rem 0 1rem; color: #1A1D26; display: flex; align-items: center; gap: 8px;">RECEIVER <svg width="18" height="18" fill="none" stroke="#d97706" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></h3>
+        <h3 style="margin: 2rem 0 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">RECEIVER <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></h3>
         <div class="details-grid">
             <div>
                 <div class="info-group"><span class="info-label">Name</span><span class="info-val" id="res-receiver-name">--</span></div>
@@ -275,7 +275,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 <div class="info-group"><span class="info-label">Email</span><span class="info-val" id="res-receiver-email">--</span></div>
             </div>
         </div>
-        <h3 style="margin: 2rem 0 1rem; color: #1A1D26; display: flex; align-items: center; gap: 8px;">SENDER <svg width="18" height="18" fill="none" stroke="#d97706" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></h3>
+        <h3 style="margin: 2rem 0 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">SENDER <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></h3>
         <div class="details-grid">
             <div>
                 <div class="info-group"><span class="info-label">Name</span><span class="info-val" id="res-sender-name">--</span></div>
@@ -285,7 +285,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 <div class="info-group"><span class="info-label">Phone</span><span class="info-val" id="res-sender-phone">--</span></div>
             </div>
         </div>
-        <h3 style="margin: 2rem 0 1rem; color: #1A1D26; display: flex; align-items: center; gap: 8px;">KEY DATES <svg width="18" height="18" fill="none" stroke="#d97706" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></h3>
+        <h3 style="margin: 2rem 0 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">KEY DATES <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></h3>
         <div class="details-grid">
             <div>
                 <div class="info-group"><span class="info-label">Shipped On</span><span class="info-val" id="res-shipped-on">--</span></div>
@@ -294,7 +294,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 <div class="info-group"><span class="info-label">Last Updated</span><span class="info-val" id="res-last-updated">--</span></div>
             </div>
         </div>
-        <h3 style="margin: 1.5rem 0 0.5rem; color: #1A1D26;">LIVE SHIPMENT MAP</h3>
+        <h3 style="margin: 1.5rem 0 0.5rem; color: #ffffff;">LIVE SHIPMENT MAP</h3>
         <div class="map-legend">
             <div class="map-legend-item"><span class="map-legend-dot origin"></span> ORIGIN</div>
             <div class="map-legend-item"><span class="map-legend-dot current"></span> CURRENT</div>
@@ -304,10 +304,10 @@ window.addEventListener('DOMContentLoaded', () => {
             <div class="route-legend-item"><span class="route-legend-line traveled"></span> Traveled</div>
             <div class="route-legend-item"><span class="route-legend-line remaining"></span> Remaining</div>
         </div>
-        <p style="color: #64748b; font-size: 0.9rem;" id="res-current-loc">Current Location: --</p>
+        <p style="color: #8892b0; font-size: 0.9rem;" id="res-current-loc">Current Location: --</p>
         <div id="track-map" class="map-container"></div>
-        <h3 style="margin: 2rem 0 0.5rem; color: #1A1D26; display: flex; align-items: center; gap: 8px;">
-            <svg width="18" height="18" fill="none" stroke="#d97706" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <h3 style="margin: 2rem 0 0.5rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+            <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
             LOCATION HISTORY
             <span id="res-stop-count" style="font-size:0.75rem;color:#94a3b8;font-weight:400;margin-left:8px;"></span>
         </h3>
@@ -449,7 +449,6 @@ window.addEventListener('DOMContentLoaded', () => {
         // Use currentPositionIndex to determine the current location
         const cpIdx = ship.currentPositionIndex !== undefined ? ship.currentPositionIndex : (ship.waypoints ? ship.waypoints.length - 1 : -1);
         const destIdx = ship.destinationIndex !== undefined ? ship.destinationIndex : -1;
-        const origIdx = ship.originIndex !== undefined ? ship.originIndex : 0;
         const currentLoc = (ship.waypoints && ship.waypoints[cpIdx]) ? ship.waypoints[cpIdx].name : (ship.waypoints && ship.waypoints.length > 0 ? ship.waypoints[ship.waypoints.length - 1].name : 'Unknown');
         document.getElementById('res-current-loc').textContent = 'Current Location: ' + currentLoc;
 
@@ -483,12 +482,10 @@ window.addEventListener('DOMContentLoaded', () => {
             }
             const reversedDestIdx = effectiveDestOrigIdx >= 0 ? ship.waypoints.length - 1 - effectiveDestOrigIdx : -1;
 
-            const reversedOrigIdx = ship.waypoints.length - 1 - origIdx;
-
             wps.forEach((wp, index) => {
                 const isStop = wp.stopType === 'stop';
                 const isCurrent = (index === reversedCpIdx) && isStop;
-                const isOrigin = (index === reversedOrigIdx) && isStop;
+                const isOrigin = (index === wps.length - 1) && isStop; // last in reversed = first in original
                 const isDest = (index === reversedDestIdx) && isStop;
                 let badge = '';
                 if (isCurrent) badge = '<span style="font-size:0.7em;color:#2196F3;border:1px solid #2196F3;padding:2px 6px;border-radius:10px;margin-left:10px;">CURRENT POSITION</span>';
@@ -502,22 +499,21 @@ window.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Init Map — pass currentPositionIndex, destinationIndex, and originIndex so the map knows which waypoints are current/dest/origin
+        // Init Map — pass currentPositionIndex and destinationIndex so the map knows which waypoints are current/dest
         setTimeout(() => {
-            initMap(ship.waypoints, cpIdx, destIdx, origIdx);
+            initMap(ship.waypoints, cpIdx, destIdx);
         }, 500);
     }
 
-    function initMap(waypoints, cpIdx, destIdx, origIdx) {
+    function initMap(waypoints, cpIdx, destIdx) {
         if (!waypoints || waypoints.length === 0) return;
         if (typeof L === 'undefined') {
-            setTimeout(() => initMap(waypoints, cpIdx, destIdx, origIdx), 300);
+            setTimeout(() => initMap(waypoints, cpIdx, destIdx), 300);
             return;
         }
 
         // Use provided cpIdx or default to last waypoint for backward compatibility
         if (cpIdx === undefined || cpIdx === null || cpIdx < 0) cpIdx = waypoints.length - 1;
-        if (origIdx === undefined || origIdx === null || origIdx < 0) origIdx = 0;
 
         // Determine effective destination index: use explicit destIdx if valid, otherwise auto-calculate
         const stopWaypoints = waypoints.map((wp, i) => ({ ...wp, origIndex: i })).filter(wp => wp.stopType === 'stop');
@@ -528,7 +524,7 @@ window.addEventListener('DOMContentLoaded', () => {
             // Auto-calculate: last stop-type waypoint that isn't origin or current
             for (let si = stopWaypoints.length - 1; si >= 0; si--) {
                 const idx = stopWaypoints[si].origIndex;
-                if (idx !== origIdx && idx !== cpIdx) {
+                if (idx !== 0 && idx !== cpIdx) {
                     effectiveDestIdx = idx;
                     break;
                 }
@@ -537,18 +533,18 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // Center the map on the current position
         const center = [waypoints[cpIdx].lat, waypoints[cpIdx].lng];
-        const map = L.map('track-map').setView(center, 12);
+        const trackMap = L.map('track-map').setView(center, 6);
         // Use CARTO Voyager for detailed, clean mapping
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
             maxZoom: 19
-        }).addTo(map);
+        }).addTo(trackMap);
 
         const latlngs = waypoints.map(wp => [wp.lat, wp.lng]);
 
-        // Fit bounds to show all waypoints
+        // Fit bounds to show all waypoints with generous padding so all 3 key points are clearly visible
         if (latlngs.length > 1) {
-            map.fitBounds(L.latLngBounds(latlngs), { padding: [50, 50], maxZoom: 13 });
+            trackMap.fitBounds(L.latLngBounds(latlngs), { padding: [50, 50], maxZoom: 13 });
         }
 
         // === TWO-COLOR ROUTE LINE ===
@@ -561,35 +557,39 @@ window.addEventListener('DOMContentLoaded', () => {
             // Traveled segment: light blue dashed
             if (traveledPoints.length > 1) {
                 L.polyline(traveledPoints, {
-                    color: '#64B5F6',
-                    weight: 3,
+                    color: '#3B82F6',
+                    weight: 2,
                     dashArray: '8, 12',
-                    opacity: 0.9
-                }).addTo(map);
+                    opacity: 0.85,
+                    lineCap: 'round',
+                    lineJoin: 'round'
+                }).addTo(trackMap);
             }
 
             // Remaining segment: gray solid
             if (remainingPoints.length > 1) {
                 L.polyline(remainingPoints, {
                     color: '#78909C',
-                    weight: 3,
-                    opacity: 0.7
-                }).addTo(map);
+                    weight: 2,
+                    opacity: 0.65,
+                    lineCap: 'round',
+                    lineJoin: 'round'
+                }).addTo(trackMap);
             }
         }
 
         // === MARKERS ===
         waypoints.forEach((wp, i) => {
             const isStop = wp.stopType === 'stop';
-            const isOrigin = (i === origIdx) && isStop;
-            const isCurrent = (i === cpIdx) && isStop;
-            const isDest = (i === effectiveDestIdx) && isStop;
+            const isFirst = (i === 0 && isStop);
+            const isCurrent = (i === cpIdx && isStop);
+            const isDest = (i === effectiveDestIdx && isStop);
 
             let markerClass, iconSize;
             if (isCurrent && waypoints.length > 1) {
                 markerClass = 'pulse-marker-client';
                 iconSize = [20, 20];
-            } else if (isOrigin) {
+            } else if (isFirst) {
                 markerClass = 'standard-marker-client origin-marker-client';
                 iconSize = [14, 14];
             } else if (isDest) {
@@ -613,7 +613,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
             // Build tooltip label with position type
             let tooltipLabel = wp.name.split(',')[0];
-            if (isOrigin) tooltipLabel = 'ORIGIN: ' + tooltipLabel;
+            if (isFirst) tooltipLabel = 'ORIGIN: ' + tooltipLabel;
             else if (isCurrent) tooltipLabel = 'CURRENT: ' + tooltipLabel;
             else if (isDest) tooltipLabel = 'DESTINATION: ' + tooltipLabel;
             else if (isStop) tooltipLabel = 'STOP: ' + tooltipLabel;
@@ -621,9 +621,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
             const tooltipClass = isStop ? 'sophisticated-label' : 'sophisticated-label transit-label-client';
 
-            const m = L.marker([wp.lat, wp.lng], { icon: customIcon }).addTo(map);
+            const m = L.marker([wp.lat, wp.lng], { icon: customIcon }).addTo(trackMap);
+            // Make key markers (origin, current, dest) always visible with permanent tooltips
+            const isPermanent = isFirst || isCurrent || isDest;
             m.bindTooltip(tooltipLabel, {
-                permanent: false,
+                permanent: isPermanent,
                 direction: 'top',
                 className: tooltipClass,
                 offset: [0, -10]
