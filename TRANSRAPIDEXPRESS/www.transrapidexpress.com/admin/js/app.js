@@ -45,11 +45,73 @@ function getZoomForType(type) {
 
 // --- Security Helpers ---
 async function hashString(str) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(str);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    // Try native crypto.subtle first (requires HTTPS or localhost)
+    if (window.crypto && window.crypto.subtle) {
+        try {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(str);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        } catch (e) {
+            console.warn('crypto.subtle failed, using fallback:', e);
+        }
+    }
+    // Fallback: pure JS SHA-256 for non-secure contexts (HTTP)
+    // This ensures login works even without HTTPS
+    function sha256Fallback(message) {
+        function rightRotate(value, amount) { return (value >>> amount) | (value << (32 - amount)); }
+        const mathPow = Math.pow;
+        const maxWord = mathPow(2, 32);
+        let H = [];
+        let K = [];
+        let primeCounter = 0;
+        const isComposite = {};
+        for (let candidate = 2; primeCounter < 64; candidate++) {
+            if (!isComposite[candidate]) {
+                for (let i = 0; i < 313; i += candidate) isComposite[i] = candidate;
+                H[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+                K[primeCounter++] = (mathPow(candidate, 1/3) * maxWord) | 0;
+            }
+        }
+        let hash = H.slice(0, 8);
+        const words = [];
+        const asciiBitLength = message.length * 8;
+        message += '\x80';
+        while (message.length % 64 - 56) message += '\x00';
+        for (let i = 0; i < message.length; i++) {
+            const j = message.charCodeAt(i);
+            if (j >> 8) return; // ASCII only
+            words[i >> 2] |= j << ((3 - i) % 4) * 8;
+        }
+        words[words.length] = (asciiBitLength / maxWord) | 0;
+        words[words.length] = asciiBitLength;
+        for (let j = 0; j < words.length;) {
+            const w = words.slice(j, j += 16);
+            const oldHash = hash.slice(0);
+            for (let i = 0; i < 64; i++) {
+                const w15 = w[i - 15], w2 = w[i - 2];
+                const a = hash[0], e = hash[4];
+                const temp1 = hash[7] + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
+                    + ((e & hash[5]) ^ ((~e) & hash[6])) + K[i]
+                    + (w[i] = (i < 16) ? w[i] : (
+                        w[i - 16] + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
+                        + w[i - 7] + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
+                    ) | 0);
+                const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
+                    + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+                hash = [(temp1 + temp2) | 0].concat(hash);
+                hash[4] = (hash[4] + temp1) | 0;
+            }
+            for (let i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+        }
+        let hex = '';
+        for (let i = 0; i < 8; i++)
+            for (let j = 3; j >= 0; j--)
+                hex += ((hash[i] >> (j * 8)) & 255).toString(16).padStart(2, '0');
+        return hex;
+    }
+    return sha256Fallback(str);
 }
 
 // --- Database Logic ---
@@ -127,25 +189,49 @@ document.addEventListener('DOMContentLoaded', () => {
     checkSession();
 
     if (elements.loginBtn) {
+        // Allow Enter key on passphrase input
+        if (elements.adminPassphrase) {
+            elements.adminPassphrase.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); elements.loginBtn.click(); }
+            });
+        }
+
         elements.loginBtn.addEventListener('click', async () => {
             const inputVal = elements.adminPassphrase.value.trim();
-            const inputHash = await hashString(inputVal);
 
-            if (inputHash === ADMIN_HASH) {
-                sessionStorage.setItem(SESSION_KEY, 'true');
-                elements.authOverlay.style.display = 'none';
-                elements.appLayout.style.display = 'flex';
-
-                // CRITICAL: Initialize Map ONLY after it's visible
-                setupMap();
-                loadDashboardStats(elements);
-                loadManageRecords(elements);
-
-                // UI Fix for Leaflet
-                setTimeout(() => { if(map) map.invalidateSize(); }, 500);
-            } else {
+            if (!inputVal) {
                 if (elements.authError) {
-                    elements.authError.textContent = "Invalid passphrase. Access denied.";
+                    elements.authError.textContent = "Please enter the passphrase.";
+                    elements.authError.style.display = 'block';
+                }
+                return;
+            }
+
+            try {
+                const inputHash = await hashString(inputVal);
+
+                if (inputHash && inputHash === ADMIN_HASH) {
+                    sessionStorage.setItem(SESSION_KEY, 'true');
+                    elements.authOverlay.style.display = 'none';
+                    elements.appLayout.style.display = 'flex';
+
+                    // CRITICAL: Initialize Map ONLY after it's visible
+                    setupMap();
+                    loadDashboardStats(elements);
+                    loadManageRecords(elements);
+
+                    // UI Fix for Leaflet
+                    setTimeout(() => { if(map) map.invalidateSize(); }, 500);
+                } else {
+                    if (elements.authError) {
+                        elements.authError.textContent = "Invalid passphrase. Access denied.";
+                        elements.authError.style.display = 'block';
+                    }
+                }
+            } catch (err) {
+                console.error('Login error:', err);
+                if (elements.authError) {
+                    elements.authError.textContent = "Authentication error. Please try again.";
                     elements.authError.style.display = 'block';
                 }
             }
