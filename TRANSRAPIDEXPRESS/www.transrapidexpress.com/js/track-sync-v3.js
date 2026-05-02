@@ -28,15 +28,19 @@ if (isTrackPage) {
         .track-result-container {
             max-width: 800px;
             margin: 2rem auto;
-            padding: 0 1rem;
-            color: white;
+            padding: 2rem;
+            color: #e2e8f0;
             display: none;
+            background: #0f172a;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
         }
         .track-result-container.active {
             display: block;
         }
         .result-header {
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
             padding-bottom: 1.5rem;
             margin-bottom: 1.5rem;
         }
@@ -50,16 +54,18 @@ if (isTrackPage) {
             border: 1px solid rgba(255,159,28,0.3);
         }
         .status-badge { color: #FF9F1C; font-weight: bold; font-size: 1.25rem; }
-        .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
-        .info-row { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); flex-wrap: nowrap; gap: 8px; }
-        .info-label { color: #8892b0; font-size: 0.85rem; font-weight: 500; flex-shrink: 0; white-space: nowrap; }
-        .info-val { font-weight: 600; text-align: right; margin-left: auto; word-break: break-word; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .details-grid { display: flex; flex-direction: column; gap: 0; margin-bottom: 2rem; }
+        .info-row { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); flex-wrap: nowrap; gap: 12px; }
+        .info-label { color: #94a3b8; font-size: 0.85rem; font-weight: 500; flex-shrink: 0; white-space: nowrap; }
+        .info-val { color: #f1f5f9; font-weight: 600; text-align: right; margin-left: auto; word-break: break-word; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .section-title { margin: 2rem 0 0.75rem; color: #f8fafc; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
+        .section-title svg { opacity: 0.7; }
         .map-container { height: 480px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin-top: 1rem; }
         .timeline { margin-top: 2rem; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 1.5rem; }
         .timeline-item { position: relative; margin-bottom: 2rem; }
         .timeline-item::before { content: ''; position: absolute; left: -1.8rem; top: 0; width: 12px; height: 12px; border-radius: 50%; background: #FF9F1C; }
         .timeline-item h4 { color: #FF9F1C; margin-bottom: 0.2rem; }
-        .timeline-date { font-size: 0.8rem; color: #8892b0; margin-bottom: 0.5rem; }
+        .timeline-date { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.5rem; }
 
         /* Fix: Ensure custom div icons have no default styling that misaligns markers */
         .custom-div-icon {
@@ -215,24 +221,25 @@ if (isTrackPage) {
             gap: 8px;
             margin-bottom: 1.5rem;
             padding: 8px 16px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: white;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #e2e8f0;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
             font-size: 0.85rem;
             transition: background 0.2s;
         }
-        .track-back-btn:hover { background: rgba(255,255,255,0.2); }
+        .track-back-btn:hover { background: rgba(255,255,255,0.15); }
 
         @media (max-width: 768px) {
-            .details-grid { grid-template-columns: 1fr; gap: 1rem; }
+            .track-result-container { padding: 1.25rem; border-radius: 14px; }
+            .details-grid { gap: 0; }
             .status-card { flex-direction: column; text-align: center; gap: 1rem; }
             .status-card div { text-align: center !important; }
             .map-container { height: 350px; }
             .map-legend { gap: 1rem; }
-            .info-row { font-size: 0.8rem; flex-wrap: nowrap; }
+            .info-row { font-size: 0.8rem; flex-wrap: nowrap; padding: 8px 0; }
             .info-label { font-size: 0.75rem; }
             .info-val { font-size: 0.8rem; }
             .sophisticated-label { font-size: 0.5rem !important; padding: 1px 5px !important; }
@@ -266,7 +273,7 @@ window.addEventListener('DOMContentLoaded', () => {
             <span>Shipment found. Live tracking loaded.</span>
         </div>
         <div class="result-header">
-            <h2 style="color: #ffffff; font-size: 1.5rem; font-weight: bold;">SHIPMENT DETAILS</h2>
+            <h2 style="color: #f8fafc; font-size: 1.5rem; font-weight: bold;">SHIPMENT DETAILS</h2>
             <p style="color: #94a3b8;">Tracking Code: <strong style="color: #FF9F1C;" id="res-code">--</strong></p>
         </div>
         <div class="status-card">
@@ -279,52 +286,36 @@ window.addEventListener('DOMContentLoaded', () => {
                 <div class="info-val" id="res-date">--</div>
             </div>
         </div>
-        <h3 style="margin: 2rem 0 1rem; color: #ffffff;">PRODUCT INFORMATION</h3>
+        <h3 class="section-title">PRODUCT INFORMATION</h3>
         <div class="details-grid">
-            <div>
-                <div class="info-row"><span class="info-label">Name</span><span class="info-val" id="res-name">--</span></div>
-                <div class="info-row"><span class="info-label">Barcode</span><span class="info-val" id="res-barcode">--</span></div>
-                <div class="info-row"><span class="info-label">Weight</span><span class="info-val" id="res-weight">--</span></div>
-                <div class="info-row"><span class="info-label">Description</span><span class="info-val" id="res-desc">--</span></div>
-                <div class="info-row"><span class="info-label">Est. Delivery</span><span class="info-val" id="res-estdelivery">--</span></div>
-            </div>
-            <div>
-                <div class="info-row"><span class="info-label">Declared Value</span><span class="info-val" id="res-value">--</span></div>
-                <div class="info-row"><span class="info-label">Circumstance</span><span class="info-val" id="res-circumstance">--</span></div>
-                <div class="info-row"><span class="info-label">Transportation</span><span class="info-val" id="res-transport">--</span></div>
-                <div class="info-row"><span class="info-label">Agency</span><span class="info-val" id="res-agency">--</span></div>
-            </div>
+            <div class="info-row"><span class="info-label">Name</span><span class="info-val" id="res-name">--</span></div>
+            <div class="info-row"><span class="info-label">Barcode</span><span class="info-val" id="res-barcode">--</span></div>
+            <div class="info-row"><span class="info-label">Weight</span><span class="info-val" id="res-weight">--</span></div>
+            <div class="info-row"><span class="info-label">Description</span><span class="info-val" id="res-desc">--</span></div>
+            <div class="info-row"><span class="info-label">Est. Delivery</span><span class="info-val" id="res-estdelivery">--</span></div>
+            <div class="info-row"><span class="info-label">Declared Value</span><span class="info-val" id="res-value">--</span></div>
+            <div class="info-row"><span class="info-label">Circumstance</span><span class="info-val" id="res-circumstance">--</span></div>
+            <div class="info-row"><span class="info-label">Transportation</span><span class="info-val" id="res-transport">--</span></div>
+            <div class="info-row"><span class="info-label">Agency</span><span class="info-val" id="res-agency">--</span></div>
         </div>
-        <h3 style="margin: 2rem 0 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">RECEIVER <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></h3>
+        <h3 class="section-title">RECEIVER <svg width="16" height="16" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></h3>
         <div class="details-grid">
-            <div>
-                <div class="info-row"><span class="info-label">Name</span><span class="info-val" id="res-receiver-name">--</span></div>
-                <div class="info-row"><span class="info-label">Phone</span><span class="info-val" id="res-receiver-phone">--</span></div>
-            </div>
-            <div>
-                <div class="info-row"><span class="info-label">Email</span><span class="info-val" id="res-receiver-email">--</span></div>
-            </div>
+            <div class="info-row"><span class="info-label">Name</span><span class="info-val" id="res-receiver-name">--</span></div>
+            <div class="info-row"><span class="info-label">Phone</span><span class="info-val" id="res-receiver-phone">--</span></div>
+            <div class="info-row"><span class="info-label">Email</span><span class="info-val" id="res-receiver-email">--</span></div>
         </div>
-        <h3 style="margin: 2rem 0 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">SENDER <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></h3>
+        <h3 class="section-title">SENDER <svg width="16" height="16" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></h3>
         <div class="details-grid">
-            <div>
-                <div class="info-row"><span class="info-label">Name</span><span class="info-val" id="res-sender-name">--</span></div>
-                <div class="info-row"><span class="info-label">Email</span><span class="info-val" id="res-sender-email">--</span></div>
-            </div>
-            <div>
-                <div class="info-row"><span class="info-label">Phone</span><span class="info-val" id="res-sender-phone">--</span></div>
-            </div>
+            <div class="info-row"><span class="info-label">Name</span><span class="info-val" id="res-sender-name">--</span></div>
+            <div class="info-row"><span class="info-label">Email</span><span class="info-val" id="res-sender-email">--</span></div>
+            <div class="info-row"><span class="info-label">Phone</span><span class="info-val" id="res-sender-phone">--</span></div>
         </div>
-        <h3 style="margin: 2rem 0 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">KEY DATES <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></h3>
+        <h3 class="section-title">KEY DATES <svg width="16" height="16" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></h3>
         <div class="details-grid">
-            <div>
-                <div class="info-row"><span class="info-label">Shipped On</span><span class="info-val" id="res-shipped-on">--</span></div>
-            </div>
-            <div>
-                <div class="info-row"><span class="info-label">Last Updated</span><span class="info-val" id="res-last-updated">--</span></div>
-            </div>
+            <div class="info-row"><span class="info-label">Shipped On</span><span class="info-val" id="res-shipped-on">--</span></div>
+            <div class="info-row"><span class="info-label">Last Updated</span><span class="info-val" id="res-last-updated">--</span></div>
         </div>
-        <h3 style="margin: 1.5rem 0 0.5rem; color: #ffffff;">LIVE SHIPMENT MAP</h3>
+        <h3 class="section-title">LIVE SHIPMENT MAP</h3>
         <div class="map-legend">
             <div class="map-legend-item"><span class="map-legend-dot origin"></span> ORIGIN</div>
             <div class="map-legend-item"><span class="map-legend-dot current"></span> CURRENT</div>
@@ -334,10 +325,10 @@ window.addEventListener('DOMContentLoaded', () => {
             <div class="route-legend-item"><span class="route-legend-line traveled"></span> Traveled</div>
             <div class="route-legend-item"><span class="route-legend-line remaining"></span> Remaining</div>
         </div>
-        <p style="color: #8892b0; font-size: 0.9rem;" id="res-current-loc">Current Location: --</p>
+        <p style="color: #94a3b8; font-size: 0.9rem;" id="res-current-loc">Current Location: --</p>
         <div id="track-map" class="map-container"></div>
-        <h3 style="margin: 2rem 0 0.5rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">
-            <svg width="18" height="18" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <h3 class="section-title">
+            <svg width="16" height="16" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
             LOCATION HISTORY
             <span id="res-stop-count" style="font-size:0.75rem;color:#94a3b8;font-weight:400;margin-left:8px;"></span>
         </h3>
@@ -524,7 +515,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 else if (!isStop) badge = '<span style="font-size:0.6em;color:#8892b0;border:1px solid rgba(136,146,176,0.4);padding:1px 5px;border-radius:10px;margin-left:10px;">TRANSIT</span>';
 
                 const nameStyle = isStop ? 'font-weight:600;' : 'font-weight:400;color:#8892b0;';
-                const itemStyle = isCurrent ? 'border-left:2px solid #2196F3;' : (!isStop ? 'opacity:0.65;' : '');
+                const itemStyle = isCurrent ? 'border-left:2px solid #2563EB;' : (!isStop ? 'opacity:0.65;' : '');
                 tlist.innerHTML += '<div class="timeline-item" style="' + itemStyle + '"><h4 style="' + nameStyle + '">' + wp.name + ' ' + badge + '</h4><div class="timeline-date">' + wp.time + '</div><p style="color:#8892b0;font-size:0.85rem;">' + (wp.status || 'Location updated') + '</p></div>';
             });
         }
