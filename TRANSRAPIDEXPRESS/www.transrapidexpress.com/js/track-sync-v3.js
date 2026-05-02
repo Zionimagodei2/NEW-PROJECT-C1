@@ -51,9 +51,9 @@ if (isTrackPage) {
         }
         .status-badge { color: #FF9F1C; font-weight: bold; font-size: 1.25rem; }
         .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
-        .info-row { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
-        .info-label { color: #8892b0; font-size: 0.85rem; font-weight: 500; flex-shrink: 0; }
-        .info-val { font-weight: 600; text-align: right; margin-left: 12px; word-break: break-word; }
+        .info-row { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); flex-wrap: nowrap; gap: 8px; }
+        .info-label { color: #8892b0; font-size: 0.85rem; font-weight: 500; flex-shrink: 0; white-space: nowrap; }
+        .info-val { font-weight: 600; text-align: right; margin-left: auto; word-break: break-word; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
         .map-container { height: 480px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin-top: 1rem; }
         .timeline { margin-top: 2rem; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 1.5rem; }
         .timeline-item { position: relative; margin-bottom: 2rem; }
@@ -61,65 +61,76 @@ if (isTrackPage) {
         .timeline-item h4 { color: #FF9F1C; margin-bottom: 0.2rem; }
         .timeline-date { font-size: 0.8rem; color: #8892b0; margin-bottom: 0.5rem; }
 
-        /* Marker Styles — matching predecessor site */
+        /* Fix: Ensure custom div icons have no default styling that misaligns markers */
+        .custom-div-icon {
+            background: transparent !important;
+            border: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Marker Styles — matching admin site styling */
         .pulse-marker-client {
-            background: #2196F3; border-radius: 50%; width: 20px; height: 20px;
-            border: 3px solid white; box-shadow: 0 0 10px rgba(33, 150, 243, 0.8);
+            background: #2563EB; border-radius: 50%; width: 20px; height: 20px;
+            border: 3px solid white; box-shadow: 0 0 10px rgba(37, 99, 235, 0.6);
             position: relative;
         }
         .pulse-marker-client::before {
             content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px;
-            border: 2px solid #2196F3; border-radius: 50%;
+            border: 2px solid #2563EB; border-radius: 50%;
             animation: beckon 1.5s infinite ease-out;
         }
         @keyframes beckon { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
 
         .standard-marker-client {
-            background: #3498db; border-radius: 50%; width: 14px; height: 14px;
+            background: #3B82F6; border-radius: 50%; width: 14px; height: 14px;
             border: 2px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
         }
-        .origin-marker-client { background: #4CAF50; border-color: white; box-shadow: 0 0 8px rgba(76,175,80,0.6); }
-        .dest-marker-client { background: #F44336; border-color: white; box-shadow: 0 0 8px rgba(244,67,54,0.6); }
-        .stop-marker-client { background: #2196F3; border-color: white; box-shadow: 0 0 5px rgba(33,150,243,0.5); }
+        .origin-marker-client { background: #059669; border-color: white; box-shadow: 0 0 8px rgba(5,150,105,0.5); }
+        .dest-marker-client { background: #DC2626; border-color: white; box-shadow: 0 0 8px rgba(220,38,38,0.5); }
+        .stop-marker-client { background: #2563EB; border-color: white; box-shadow: 0 0 5px rgba(37,99,235,0.4); }
         .transit-marker-client {
             background: rgba(136, 146, 176, 0.5); border-radius: 50%; width: 8px; height: 8px;
             border: 1px solid rgba(255,255,255,0.3);
         }
-        .transit-label-client {
-            background: rgba(10, 22, 40, 0.6) !important;
-            border: 1px solid rgba(136, 146, 176, 0.3) !important;
-            font-size: 0.7rem !important;
-            font-weight: 400 !important;
-            color: #8892b0 !important;
-        }
 
+        /* Compact label styling — matches admin professional style */
         .sophisticated-label {
-            background: rgba(10, 22, 40, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 159, 28, 0.6);
-            color: #fff;
-            font-size: 0.75rem;
-            font-weight: 700;
-            font-family: inherit;
-            padding: 5px 12px;
-            border-radius: 14px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            white-space: nowrap;
-            letter-spacing: 0.3px;
+            background: #fff !important;
+            border: 1px solid rgba(0,0,0,0.12) !important;
+            color: #1A1D26 !important;
+            font-size: 0.6rem !important;
+            font-weight: 600 !important;
+            font-family: inherit !important;
+            padding: 2px 7px !important;
+            border-radius: 4px !important;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1) !important;
+            white-space: nowrap !important;
+            letter-spacing: 0.2px !important;
+            line-height: 1.4 !important;
         }
-        .sophisticated-label::before { display: none; }
-        /* Color-coded labels for key markers */
+        .sophisticated-label::before { display: none !important; }
+        /* Color-coded labels for key markers — left border accent like admin */
         .label-origin {
-            border-color: #4CAF50 !important;
-            box-shadow: 0 4px 20px rgba(76, 175, 80, 0.3);
+            border-color: #059669 !important;
+            border-left: 2px solid #059669 !important;
         }
         .label-current {
-            border-color: #2196F3 !important;
-            box-shadow: 0 4px 20px rgba(33, 150, 243, 0.3);
+            border-color: #2563EB !important;
+            border-left: 2px solid #2563EB !important;
         }
         .label-dest {
-            border-color: #F44336 !important;
-            box-shadow: 0 4px 20px rgba(244, 67, 54, 0.3);
+            border-color: #DC2626 !important;
+            border-left: 2px solid #DC2626 !important;
+        }
+        /* Transit label — subtle, minimal */
+        .transit-label-client {
+            background: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid rgba(0, 0, 0, 0.1) !important;
+            font-size: 0.55rem !important;
+            font-weight: 400 !important;
+            color: #64748b !important;
         }
 
         /* Map Legend */
@@ -145,9 +156,9 @@ if (isTrackPage) {
             border-radius: 50%;
             display: inline-block;
         }
-        .map-legend-dot.origin { background: #4CAF50; }
-        .map-legend-dot.current { background: #2196F3; }
-        .map-legend-dot.dest { background: #F44336; }
+        .map-legend-dot.origin { background: #059669; }
+        .map-legend-dot.current { background: #2563EB; }
+        .map-legend-dot.dest { background: #DC2626; }
 
         /* Route legend (traveled vs remaining) */
         .route-legend {
@@ -166,7 +177,7 @@ if (isTrackPage) {
         }
         .route-legend-line {
             width: 24px;
-            height: 3px;
+            height: 2px;
             display: inline-block;
             border-radius: 2px;
         }
@@ -221,8 +232,10 @@ if (isTrackPage) {
             .status-card div { text-align: center !important; }
             .map-container { height: 350px; }
             .map-legend { gap: 1rem; }
-            .info-row { font-size: 0.85rem; }
-            .info-val { font-size: 0.85rem; }
+            .info-row { font-size: 0.8rem; flex-wrap: nowrap; }
+            .info-label { font-size: 0.75rem; }
+            .info-val { font-size: 0.8rem; }
+            .sophisticated-label { font-size: 0.5rem !important; padding: 1px 5px !important; }
         }
     `;
     document.head.appendChild(trackStyles);
@@ -649,13 +662,14 @@ window.addEventListener('DOMContentLoaded', () => {
             }
 
             const m = L.marker([wp.lat, wp.lng], { icon: customIcon }).addTo(trackMap);
-            // Make key markers (origin, current, dest) always visible with permanent tooltips
-            const isPermanent = isFirst || isCurrent || isDest;
+            // ALL labels always visible (permanent) so user never has to touch/hover to see them.
+            // Offset keeps the label above the dot so it never covers the pin.
+            const labelOffset = isStop ? [0, -12] : [0, -8];
             m.bindTooltip(tooltipLabel, {
-                permanent: isPermanent,
+                permanent: true,
                 direction: 'top',
                 className: tooltipClass,
-                offset: [0, -10]
+                offset: labelOffset
             });
         });
     }
