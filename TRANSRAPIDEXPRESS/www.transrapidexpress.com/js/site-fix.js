@@ -375,25 +375,49 @@
 
   // ─── 4. THEME SWITCHER ───
   function initThemeSwitcher() {
-    // Force light theme by default
+    // Apply saved theme on load (respect user preference)
     var savedTheme = localStorage.getItem('theme');
-    if (!savedTheme || savedTheme === 'system') {
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.remove('light');
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
+    } else if (savedTheme === 'system') {
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.classList.remove('light', 'dark');
+      document.documentElement.classList.add(prefersDark ? 'dark' : 'light');
+      document.documentElement.style.colorScheme = prefersDark ? 'dark' : 'light';
+    } else {
+      // Default to light theme if no preference saved
       document.documentElement.classList.remove('dark');
       document.documentElement.classList.add('light');
       document.documentElement.style.colorScheme = 'light';
-      localStorage.setItem('theme', 'light');
-    } else if (savedTheme === 'light') {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
-      document.documentElement.style.colorScheme = 'light';
+      if (!savedTheme) localStorage.setItem('theme', 'light');
     }
-    const themeButtons = document.querySelectorAll('button[type="button"]');
-    
-    themeButtons.forEach(btn => {
-      const text = btn.textContent.trim().toLowerCase();
+
+    // Helper: toggle between light and dark
+    function toggleTheme() {
+      var html = document.documentElement;
+      var isDark = html.classList.contains('dark');
+      if (isDark) {
+        html.classList.remove('dark');
+        html.classList.add('light');
+        html.style.colorScheme = 'light';
+        localStorage.setItem('theme', 'light');
+      } else {
+        html.classList.remove('light');
+        html.classList.add('dark');
+        html.style.colorScheme = 'dark';
+        localStorage.setItem('theme', 'dark');
+      }
+    }
+
+    // Attach to buttons with explicit light/dark/auto text
+    var themeButtons = document.querySelectorAll('button[type="button"]');
+    themeButtons.forEach(function(btn) {
+      var text = btn.textContent.trim().toLowerCase();
       if (text === 'light' || text === 'dark' || text === 'auto') {
         btn.addEventListener('click', function () {
-          const html = document.documentElement;
+          var html = document.documentElement;
           if (text === 'light') {
             html.classList.remove('dark');
             html.classList.add('light');
@@ -405,7 +429,7 @@
             html.style.colorScheme = 'dark';
             localStorage.setItem('theme', 'dark');
           } else {
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             html.classList.remove('light', 'dark');
             html.classList.add(prefersDark ? 'dark' : 'light');
             html.style.colorScheme = prefersDark ? 'dark' : 'light';
@@ -414,26 +438,30 @@
         });
       }
     });
-    
-    // Desktop theme button
-    const desktopThemeBtn = document.querySelector('button[data-slot="dropdown-menu-trigger"]');
+
+    // Desktop theme toggle button (text contains "Theme")
+    // This catches the button in the header: <span>Theme</span>
+    var desktopThemeBtn = document.querySelector('button[data-slot="dropdown-menu-trigger"]');
     if (desktopThemeBtn && desktopThemeBtn.textContent.includes('Theme')) {
-      desktopThemeBtn.addEventListener('click', function () {
-        const html = document.documentElement;
-        const isDark = html.classList.contains('dark');
-        if (isDark) {
-          html.classList.remove('dark');
-          html.classList.add('light');
-          html.style.colorScheme = 'light';
-          localStorage.setItem('theme', 'light');
-        } else {
-          html.classList.remove('light');
-          html.classList.add('dark');
-          html.style.colorScheme = 'dark';
-          localStorage.setItem('theme', 'dark');
-        }
-      });
+      desktopThemeBtn.addEventListener('click', toggleTheme);
     }
+
+    // Also find the Theme button by its text content (for pages without data-slot)
+    // This catches the header Theme button on track.html and other pages
+    document.querySelectorAll('button[type="button"]').forEach(function(btn) {
+      var text = btn.textContent.trim().toLowerCase();
+      // Match "Theme" button but not already-handled light/dark/auto buttons
+      if (text.indexOf('theme') !== -1 && text !== 'light' && text !== 'dark' && text !== 'auto') {
+        // Check it's not already the data-slot button we handled above
+        if (!btn.hasAttribute('data-slot')) {
+          btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleTheme();
+          });
+        }
+      }
+    });
   }
 
   // ─── 5. SCROLL TO TOP ───

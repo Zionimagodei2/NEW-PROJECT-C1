@@ -1,6 +1,7 @@
 // track-sync-v3.js — Tracking functionality for track.html
 // OVERLAY COMPLETELY REMOVED: No more overlay, no more click interceptors.
 // "Track Now" and "Track Shipment" buttons now navigate to track.html normally.
+// Theme-aware: uses CSS custom properties so colors adapt to light/dark mode.
 
 const STORE_KEY = 'transrapid_shipments';
 function getShipments() {
@@ -22,30 +23,70 @@ if (isTrackPage) {
     leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
     document.head.appendChild(leafletJS);
 
-    // Tracking result styles
+    // Tracking result styles — theme-aware using CSS custom properties
     const trackStyles = document.createElement('style');
     trackStyles.innerHTML = `
+        /* ============================================
+           RESULT CONTAINER — Theme-Aware Design
+           Uses CSS custom properties so the entire
+           container adapts to light/dark theme.
+           ============================================ */
         .track-result-container {
+            /* Light mode defaults */
+            --tr-bg: #ffffff;
+            --tr-text: #1A1D26;
+            --tr-text-muted: #64748b;
+            --tr-text-bright: #1A1D26;
+            --tr-text-value: #1A1D26;
+            --tr-border: rgba(0,0,0,0.06);
+            --tr-border-strong: rgba(0,0,0,0.1);
+            --tr-surface: rgba(0,0,0,0.03);
+            --tr-shadow: 0 25px 50px -12px rgba(0,0,0,0.08);
+
             max-width: 800px;
             margin: 2rem auto;
             padding: 2rem;
-            color: #e2e8f0;
+            color: var(--tr-text) !important;
             display: none;
-            background: #0f172a;
+            background: var(--tr-bg) !important;
             border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.08);
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            border: 1px solid var(--tr-border);
+            box-shadow: var(--tr-shadow);
+        }
+        /* Dark mode overrides */
+        .dark .track-result-container {
+            --tr-bg: #0f172a;
+            --tr-text: #e2e8f0;
+            --tr-text-muted: #94a3b8;
+            --tr-text-bright: #f8fafc;
+            --tr-text-value: #f1f5f9;
+            --tr-border: rgba(255,255,255,0.06);
+            --tr-border-strong: rgba(255,255,255,0.1);
+            --tr-surface: rgba(255,255,255,0.05);
+            --tr-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
         }
         .track-result-container.active {
             display: block;
         }
         .result-header {
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-bottom: 1px solid var(--tr-border);
             padding-bottom: 1.5rem;
             margin-bottom: 1.5rem;
         }
+        .result-title {
+            color: var(--tr-text-bright) !important;
+            font-size: 1.5rem !important;
+            font-weight: bold !important;
+        }
+        .tracking-code-label {
+            color: var(--tr-text-muted);
+        }
+        .tracking-code-value {
+            color: #FF9F1C !important;
+            font-weight: bold;
+        }
         .status-card {
-            background: rgba(255,255,255,0.05);
+            background: var(--tr-surface);
             padding: 1.5rem;
             border-radius: 12px;
             display: flex;
@@ -55,17 +96,31 @@ if (isTrackPage) {
         }
         .status-badge { color: #FF9F1C; font-weight: bold; font-size: 1.25rem; }
         .details-grid { display: flex; flex-direction: column; gap: 0; margin-bottom: 2rem; }
-        .info-row { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); flex-wrap: nowrap; gap: 12px; }
-        .info-label { color: #94a3b8; font-size: 0.85rem; font-weight: 500; flex-shrink: 0; white-space: nowrap; }
-        .info-val { color: #f1f5f9; font-weight: 600; text-align: right; margin-left: auto; word-break: break-word; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-        .section-title { margin: 2rem 0 0.75rem; color: #f8fafc; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
+        .info-row { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--tr-border); flex-wrap: nowrap; gap: 12px; }
+        .info-label { color: var(--tr-text-muted); font-size: 0.85rem; font-weight: 500; flex-shrink: 0; white-space: nowrap; }
+        .info-val { color: var(--tr-text-value) !important; font-weight: 600; text-align: right; margin-left: auto; word-break: break-word; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .section-title { margin: 2rem 0 0.75rem; color: var(--tr-text-bright) !important; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
         .section-title svg { opacity: 0.7; }
-        .map-container { height: 480px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin-top: 1rem; }
-        .timeline { margin-top: 2rem; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 1.5rem; }
+        .map-container { height: 480px; border-radius: 12px; overflow: hidden; border: 1px solid var(--tr-border-strong); margin-top: 1rem; }
+        .timeline { margin-top: 2rem; border-left: 2px solid var(--tr-border-strong); padding-left: 1.5rem; }
         .timeline-item { position: relative; margin-bottom: 2rem; }
         .timeline-item::before { content: ''; position: absolute; left: -1.8rem; top: 0; width: 12px; height: 12px; border-radius: 50%; background: #FF9F1C; }
         .timeline-item h4 { color: #FF9F1C; margin-bottom: 0.2rem; }
-        .timeline-date { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.5rem; }
+        .timeline-date { font-size: 0.8rem; color: var(--tr-text-muted); margin-bottom: 0.5rem; }
+        .timeline-status { color: var(--tr-text-muted); font-size: 0.85rem; }
+        .current-loc-text { color: var(--tr-text-muted) !important; font-size: 0.9rem; }
+        .stop-count-text { font-size: 0.75rem; color: var(--tr-text-muted); font-weight: 400; margin-left: 8px; }
+
+        /* Timeline badges */
+        .tl-badge { font-size: 0.7em; padding: 2px 6px; border-radius: 10px; margin-left: 10px; display: inline-block; }
+        .tl-badge-current { color: #2196F3; border: 1px solid #2196F3; }
+        .tl-badge-origin { color: #4CAF50; border: 1px solid #4CAF50; }
+        .tl-badge-dest { color: #F44336; border: 1px solid #F44336; }
+        .tl-badge-transit { font-size: 0.6em; color: var(--tr-text-muted); border: 1px solid rgba(136,146,176,0.4); padding: 1px 5px; }
+        .tl-name-stop { font-weight: 600; }
+        .tl-name-transit { font-weight: 400; color: var(--tr-text-muted); }
+        .tl-item-current { border-left: 2px solid #2563EB; }
+        .tl-item-transit { opacity: 0.65; }
 
         /* Fix: Ensure custom div icons have no default styling that misaligns markers */
         .custom-div-icon {
@@ -154,7 +209,7 @@ if (isTrackPage) {
             gap: 6px;
             font-size: 0.85rem;
             font-weight: 600;
-            color: #fff;
+            color: var(--tr-text-bright);
         }
         .map-legend-dot {
             width: 10px;
@@ -179,7 +234,7 @@ if (isTrackPage) {
             align-items: center;
             gap: 6px;
             font-size: 0.75rem;
-            color: #94a3b8;
+            color: var(--tr-text-muted);
         }
         .route-legend-line {
             width: 24px;
@@ -221,16 +276,16 @@ if (isTrackPage) {
             gap: 8px;
             margin-bottom: 1.5rem;
             padding: 8px 16px;
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.15);
-            color: #e2e8f0;
+            background: var(--tr-surface);
+            border: 1px solid var(--tr-border-strong);
+            color: var(--tr-text);
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
             font-size: 0.85rem;
             transition: background 0.2s;
         }
-        .track-back-btn:hover { background: rgba(255,255,255,0.15); }
+        .track-back-btn:hover { background: var(--tr-border); }
 
         @media (max-width: 768px) {
             .track-result-container { padding: 1.25rem; border-radius: 14px; }
@@ -273,8 +328,8 @@ window.addEventListener('DOMContentLoaded', () => {
             <span>Shipment found. Live tracking loaded.</span>
         </div>
         <div class="result-header">
-            <h2 style="color: #f8fafc; font-size: 1.5rem; font-weight: bold;">SHIPMENT DETAILS</h2>
-            <p style="color: #94a3b8;">Tracking Code: <strong style="color: #FF9F1C;" id="res-code">--</strong></p>
+            <h2 class="result-title">SHIPMENT DETAILS</h2>
+            <p class="tracking-code-label">Tracking Code: <strong class="tracking-code-value" id="res-code">--</strong></p>
         </div>
         <div class="status-card">
             <div>
@@ -325,12 +380,12 @@ window.addEventListener('DOMContentLoaded', () => {
             <div class="route-legend-item"><span class="route-legend-line traveled"></span> Traveled</div>
             <div class="route-legend-item"><span class="route-legend-line remaining"></span> Remaining</div>
         </div>
-        <p style="color: #94a3b8; font-size: 0.9rem;" id="res-current-loc">Current Location: --</p>
+        <p class="current-loc-text" id="res-current-loc">Current Location: --</p>
         <div id="track-map" class="map-container"></div>
         <h3 class="section-title">
             <svg width="16" height="16" fill="none" stroke="#FF9F1C" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
             LOCATION HISTORY
-            <span id="res-stop-count" style="font-size:0.75rem;color:#94a3b8;font-weight:400;margin-left:8px;"></span>
+            <span id="res-stop-count" class="stop-count-text"></span>
         </h3>
         <div class="timeline" id="res-timeline"></div>
     `;
@@ -509,14 +564,14 @@ window.addEventListener('DOMContentLoaded', () => {
                 const isOrigin = (index === wps.length - 1) && isStop; // last in reversed = first in original
                 const isDest = (index === reversedDestIdx) && isStop;
                 let badge = '';
-                if (isCurrent) badge = '<span style="font-size:0.7em;color:#2196F3;border:1px solid #2196F3;padding:2px 6px;border-radius:10px;margin-left:10px;">CURRENT POSITION</span>';
-                else if (isOrigin) badge = '<span style="font-size:0.7em;color:#4CAF50;border:1px solid #4CAF50;padding:2px 6px;border-radius:10px;margin-left:10px;">ORIGIN</span>';
-                else if (isDest) badge = '<span style="font-size:0.7em;color:#F44336;border:1px solid #F44336;padding:2px 6px;border-radius:10px;margin-left:10px;">DESTINATION</span>';
-                else if (!isStop) badge = '<span style="font-size:0.6em;color:#8892b0;border:1px solid rgba(136,146,176,0.4);padding:1px 5px;border-radius:10px;margin-left:10px;">TRANSIT</span>';
+                if (isCurrent) badge = '<span class="tl-badge tl-badge-current">CURRENT POSITION</span>';
+                else if (isOrigin) badge = '<span class="tl-badge tl-badge-origin">ORIGIN</span>';
+                else if (isDest) badge = '<span class="tl-badge tl-badge-dest">DESTINATION</span>';
+                else if (!isStop) badge = '<span class="tl-badge tl-badge-transit">TRANSIT</span>';
 
-                const nameStyle = isStop ? 'font-weight:600;' : 'font-weight:400;color:#8892b0;';
-                const itemStyle = isCurrent ? 'border-left:2px solid #2563EB;' : (!isStop ? 'opacity:0.65;' : '');
-                tlist.innerHTML += '<div class="timeline-item" style="' + itemStyle + '"><h4 style="' + nameStyle + '">' + wp.name + ' ' + badge + '</h4><div class="timeline-date">' + wp.time + '</div><p style="color:#8892b0;font-size:0.85rem;">' + (wp.status || 'Location updated') + '</p></div>';
+                const nameClass = isStop ? 'tl-name-stop' : 'tl-name-transit';
+                const itemClass = isCurrent ? 'tl-item-current' : (!isStop ? 'tl-item-transit' : '');
+                tlist.innerHTML += '<div class="timeline-item ' + itemClass + '"><h4 class="' + nameClass + '">' + wp.name + ' ' + badge + '</h4><div class="timeline-date">' + wp.time + '</div><p class="timeline-status">' + (wp.status || 'Location updated') + '</p></div>';
             });
         }
 

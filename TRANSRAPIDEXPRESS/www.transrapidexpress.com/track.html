@@ -158,6 +158,41 @@
         .credentials-info p {
             font-size: 13px;
         }
+
+        /* Dark mode styles for track page */
+        .dark .track-page-container {
+            background-color: #0a1628;
+            color: #e2e8f0;
+            background-image: linear-gradient(rgba(10, 22, 40, 0.92), rgba(10, 22, 40, 0.96)), url('images/hero-shipping.jpg');
+        }
+        .dark .track-card {
+            background: rgba(15, 23, 42, 0.85);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+        .dark .track-input-wrapper input {
+            background: #1e293b;
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #f1f5f9;
+        }
+        .dark .track-input-wrapper input::placeholder {
+            color: #64748b;
+        }
+        .dark .track-input-wrapper input:focus {
+            background: #0f172a;
+            border-color: #d97706;
+        }
+        .dark .track-input-group label {
+            color: #94a3b8;
+        }
+        .dark .credentials-info {
+            color: #94a3b8;
+        }
+        .dark .credentials-info h4 {
+            color: #64748b;
+        }
+        .dark .security-badge {
+            color: #64748b;
+        }
     </style>
 </head>
 <body class="font-sans antialiased min-h-screen flex flex-col">
@@ -409,11 +444,18 @@
     </footer>
 
     <script>
-        // Force light theme on track page
+        // Respect saved theme preference on track page
         (function() {
-            document.documentElement.classList.remove('dark');
-            document.documentElement.classList.add('light');
-            document.documentElement.style.colorScheme = 'light';
+            var savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.remove('light');
+                document.documentElement.classList.add('dark');
+                document.documentElement.style.colorScheme = 'dark';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+                document.documentElement.style.colorScheme = 'light';
+            }
         })();
         // Pre-fill tracking code from URL parameter
         (function() {
