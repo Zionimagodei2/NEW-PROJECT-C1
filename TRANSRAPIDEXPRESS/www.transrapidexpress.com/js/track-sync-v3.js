@@ -148,73 +148,91 @@ if (isTrackPage) {
             box-sizing: border-box !important;
         }
 
-        /* Marker Styles — matching admin site styling */
+        /* Marker Styles — larger dots so lines visibly connect to them */
         .pulse-marker-client {
-            background: #2563EB; border-radius: 50%; width: 20px; height: 20px;
-            border: 3px solid white; box-shadow: 0 0 10px rgba(37, 99, 235, 0.6);
+            background: #2563EB; border-radius: 50%; width: 28px; height: 28px;
+            border: 4px solid white; box-shadow: 0 0 14px rgba(37, 99, 235, 0.6);
             position: absolute; top: 0; left: 0;
             box-sizing: border-box;
         }
         .pulse-marker-client::before {
-            content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px;
+            content: ''; position: absolute; top: -12px; left: -12px; right: -12px; bottom: -12px;
             border: 2px solid #2563EB; border-radius: 50%;
             animation: beckon 1.5s infinite ease-out;
         }
         @keyframes beckon { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
 
         .standard-marker-client {
-            background: #3B82F6; border-radius: 50%; width: 14px; height: 14px;
-            border: 2px solid white;
-            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+            background: #3B82F6; border-radius: 50%; width: 18px; height: 18px;
+            border: 3px solid white;
+            box-shadow: 0 0 6px rgba(0,0,0,0.2);
             position: absolute; top: 0; left: 0;
             box-sizing: border-box;
         }
-        .origin-marker-client { background: #059669; border-color: white; box-shadow: 0 0 8px rgba(5,150,105,0.5); }
-        .dest-marker-client { background: #DC2626; border-color: white; box-shadow: 0 0 8px rgba(220,38,38,0.5); }
-        .stop-marker-client { background: #2563EB; border-color: white; box-shadow: 0 0 5px rgba(37,99,235,0.4); }
+        .origin-marker-client { background: #059669; border-color: white; box-shadow: 0 0 10px rgba(5,150,105,0.5); }
+        .dest-marker-client { background: #DC2626; border-color: white; box-shadow: 0 0 10px rgba(220,38,38,0.5); }
+        .stop-marker-client { background: #2563EB; border-color: white; box-shadow: 0 0 6px rgba(37,99,235,0.4); }
         .transit-marker-client {
-            background: rgba(136, 146, 176, 0.5); border-radius: 50%; width: 8px; height: 8px;
-            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(136, 146, 176, 0.5); border-radius: 50%; width: 12px; height: 12px;
+            border: 2px solid rgba(255,255,255,0.4);
             position: absolute; top: 0; left: 0;
             box-sizing: border-box;
         }
 
-        /* Compact label styling — matches admin professional style */
+        /* Dialogue-bubble style labels — pure white, round-edged pill shape */
         .sophisticated-label {
-            background: #fff !important;
-            border: 1px solid rgba(0,0,0,0.12) !important;
+            background: #ffffff !important;
+            border: none !important;
             color: #1A1D26 !important;
-            font-size: 0.6rem !important;
+            font-size: 0.65rem !important;
             font-weight: 600 !important;
             font-family: inherit !important;
-            padding: 2px 7px !important;
-            border-radius: 4px !important;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.1) !important;
+            padding: 4px 10px !important;
+            border-radius: 14px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
             white-space: nowrap !important;
-            letter-spacing: 0.2px !important;
+            letter-spacing: 0.3px !important;
             line-height: 1.4 !important;
+            position: relative !important;
         }
-        .sophisticated-label::before { display: none !important; }
-        /* Color-coded labels for key markers — left border accent like admin */
-        .label-origin {
-            border-color: #059669 !important;
-            border-left: 2px solid #059669 !important;
+        /* Small caret/pointer pointing down toward the dot */
+        .sophisticated-label::before {
+            display: block !important;
+            content: '' !important;
+            position: absolute !important;
+            bottom: -5px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 0 !important;
+            height: 0 !important;
+            border-left: 5px solid transparent !important;
+            border-right: 5px solid transparent !important;
+            border-top: 6px solid #ffffff !important;
         }
-        .label-current {
-            border-color: #2563EB !important;
-            border-left: 2px solid #2563EB !important;
+        /* Color-coded dot indicator inside the label for key markers */
+        .label-origin::after,
+        .label-current::after,
+        .label-dest::after {
+            content: '' !important;
+            display: inline-block !important;
+            width: 6px !important;
+            height: 6px !important;
+            border-radius: 50% !important;
+            margin-left: 5px !important;
+            vertical-align: middle !important;
         }
-        .label-dest {
-            border-color: #DC2626 !important;
-            border-left: 2px solid #DC2626 !important;
-        }
-        /* Transit label — subtle, minimal */
+        .label-origin::after { background: #059669 !important; }
+        .label-current::after { background: #2563EB !important; }
+        .label-dest::after { background: #DC2626 !important; }
+        /* Transit label — lighter, more subtle */
         .transit-label-client {
-            background: rgba(255, 255, 255, 0.9) !important;
-            border: 1px solid rgba(0, 0, 0, 0.1) !important;
+            background: #ffffff !important;
+            border: none !important;
             font-size: 0.55rem !important;
-            font-weight: 400 !important;
+            font-weight: 500 !important;
             color: #64748b !important;
+            padding: 3px 8px !important;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1) !important;
         }
 
         /* Map Legend */
@@ -321,7 +339,8 @@ if (isTrackPage) {
             .info-row { font-size: 0.8rem; flex-wrap: nowrap; padding: 8px 0; }
             .info-label { font-size: 0.75rem; }
             .info-val { font-size: 0.8rem; }
-            .sophisticated-label { font-size: 0.5rem !important; padding: 1px 5px !important; }
+            .sophisticated-label { font-size: 0.5rem !important; padding: 2px 7px !important; border-radius: 10px !important; }
+            .sophisticated-label::before { border-left-width: 4px !important; border-right-width: 4px !important; border-top-width: 5px !important; bottom: -4px !important; }
         }
     `;
     document.head.appendChild(trackStyles);
@@ -699,20 +718,20 @@ window.addEventListener('DOMContentLoaded', () => {
             let markerClass, iconSize;
             if (isCurrent && waypoints.length > 1) {
                 markerClass = 'pulse-marker-client';
-                iconSize = [20, 20];
+                iconSize = [28, 28];
             } else if (isFirst) {
                 markerClass = 'standard-marker-client origin-marker-client';
-                iconSize = [14, 14];
+                iconSize = [18, 18];
             } else if (isDest) {
                 markerClass = 'standard-marker-client dest-marker-client';
-                iconSize = [14, 14];
+                iconSize = [18, 18];
             } else if (isStop) {
                 markerClass = 'standard-marker-client stop-marker-client';
-                iconSize = [14, 14];
+                iconSize = [18, 18];
             } else {
                 // Transit point — subtle small dot
                 markerClass = 'transit-marker-client';
-                iconSize = [8, 8];
+                iconSize = [12, 12];
             }
 
             const customIcon = L.divIcon({
@@ -722,29 +741,25 @@ window.addEventListener('DOMContentLoaded', () => {
                 iconAnchor: [iconSize[0] / 2, iconSize[1] / 2]
             });
 
-            // Build tooltip label with position type
-            let tooltipLabel = wp.name.split(',')[0];
+            // Build tooltip label — ONLY show the city/location name, strip coordinates/zip codes
+            let tooltipLabel = wp.name.split(',')[0].trim();
+            // Remove any trailing postal codes or coordinate-like numbers (e.g., '12345', '1A2 3B4')
+            tooltipLabel = tooltipLabel.replace(/\s+\d{4,}\s*$/, '').replace(/\s+[A-Z]\d[A-Z]\s*\d[A-Z]\d\s*$/i, '').trim();
             let tooltipClass = 'sophisticated-label';
             if (isFirst) {
-                tooltipLabel = 'ORIGIN: ' + tooltipLabel;
                 tooltipClass += ' label-origin';
             } else if (isCurrent) {
-                tooltipLabel = 'CURRENT: ' + tooltipLabel;
                 tooltipClass += ' label-current';
             } else if (isDest) {
-                tooltipLabel = 'DESTINATION: ' + tooltipLabel;
                 tooltipClass += ' label-dest';
-            } else if (isStop) {
-                tooltipLabel = 'STOP: ' + tooltipLabel;
-            } else {
-                // Transit points just show the name
+            } else if (!isStop) {
                 tooltipClass += ' transit-label-client';
             }
 
             const m = L.marker([wp.lat, wp.lng], { icon: customIcon }).addTo(trackMap);
             // ALL labels always visible (permanent) so user never has to touch/hover to see them.
             // Offset keeps the label above the dot so it never covers the pin.
-            const labelOffset = isStop ? [0, -12] : [0, -8];
+            const labelOffset = isStop ? [0, -16] : [0, -10];
             m.bindTooltip(tooltipLabel, {
                 permanent: true,
                 direction: 'top',
