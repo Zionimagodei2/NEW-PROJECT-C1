@@ -74,10 +74,11 @@ if (isTrackPage) {
             margin-bottom: 1.5rem;
         }
         .result-title {
-            color: var(--tr-text-bright) !important;
+            color: #1A1D26 !important;
             font-size: 1.5rem !important;
             font-weight: bold !important;
         }
+        html.dark .track-result-container .result-title { color: #f8fafc !important; }
         .tracking-code-label {
             color: var(--tr-text-muted);
         }
@@ -98,8 +99,11 @@ if (isTrackPage) {
         .details-grid { display: flex; flex-direction: column; gap: 0; margin-bottom: 2rem; }
         .info-row { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--tr-border); flex-wrap: nowrap; gap: 12px; }
         .info-label { color: var(--tr-text-muted); font-size: 0.85rem; font-weight: 500; flex-shrink: 0; white-space: nowrap; }
-        .info-val { color: var(--tr-text-value) !important; font-weight: 600; text-align: right; margin-left: auto; word-break: break-word; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-        .section-title { margin: 2rem 0 0.75rem; color: var(--tr-text-bright) !important; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
+        .info-val { color: #1A1D26 !important; font-weight: 600; text-align: right; margin-left: auto; word-break: break-word; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        html.dark .track-result-container .info-val,
+        html.dark .info-val { color: #f1f5f9 !important; }
+        .section-title { margin: 2rem 0 0.75rem; color: #1A1D26 !important; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
+        html.dark .track-result-container .section-title { color: #f8fafc !important; }
         .section-title svg { opacity: 0.7; }
         .map-container { height: 480px; border-radius: 12px; overflow: hidden; border: 1px solid var(--tr-border-strong); margin-top: 1rem; }
         .timeline { margin-top: 2rem; border-left: 2px solid var(--tr-border-strong); padding-left: 1.5rem; }
@@ -123,18 +127,33 @@ if (isTrackPage) {
         .tl-item-transit { opacity: 0.65; }
 
         /* Fix: Ensure custom div icons have no default styling that misaligns markers */
-        .custom-div-icon {
+        /* Override both .custom-div-icon AND the default .leaflet-div-icon class */
+        .custom-div-icon,
+        .leaflet-div-icon.custom-div-icon {
             background: transparent !important;
             border: none !important;
             margin: 0 !important;
             padding: 0 !important;
+            line-height: 0 !important;
+            font-size: 0 !important;
+            overflow: visible !important;
+            white-space: nowrap !important;
+        }
+        /* Ensure inner marker divs are exactly positioned within their wrapper */
+        .custom-div-icon > div,
+        .leaflet-div-icon.custom-div-icon > div {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            box-sizing: border-box !important;
         }
 
         /* Marker Styles — matching admin site styling */
         .pulse-marker-client {
             background: #2563EB; border-radius: 50%; width: 20px; height: 20px;
             border: 3px solid white; box-shadow: 0 0 10px rgba(37, 99, 235, 0.6);
-            position: relative;
+            position: absolute; top: 0; left: 0;
+            box-sizing: border-box;
         }
         .pulse-marker-client::before {
             content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px;
@@ -147,6 +166,8 @@ if (isTrackPage) {
             background: #3B82F6; border-radius: 50%; width: 14px; height: 14px;
             border: 2px solid white;
             box-shadow: 0 0 5px rgba(0,0,0,0.2);
+            position: absolute; top: 0; left: 0;
+            box-sizing: border-box;
         }
         .origin-marker-client { background: #059669; border-color: white; box-shadow: 0 0 8px rgba(5,150,105,0.5); }
         .dest-marker-client { background: #DC2626; border-color: white; box-shadow: 0 0 8px rgba(220,38,38,0.5); }
@@ -154,6 +175,8 @@ if (isTrackPage) {
         .transit-marker-client {
             background: rgba(136, 146, 176, 0.5); border-radius: 50%; width: 8px; height: 8px;
             border: 1px solid rgba(255,255,255,0.3);
+            position: absolute; top: 0; left: 0;
+            box-sizing: border-box;
         }
 
         /* Compact label styling — matches admin professional style */
@@ -209,8 +232,9 @@ if (isTrackPage) {
             gap: 6px;
             font-size: 0.85rem;
             font-weight: 600;
-            color: var(--tr-text-bright);
+            color: #1A1D26;
         }
+        html.dark .map-legend-item { color: #f8fafc; }
         .map-legend-dot {
             width: 10px;
             height: 10px;
@@ -575,6 +599,14 @@ window.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        // FORCE visible colors on all .info-val elements — belt-and-suspenders approach
+        // This ensures values are NEVER white/invisible regardless of CSS conflicts
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        const forcedValueColor = isDarkMode ? '#f1f5f9' : '#1A1D26';
+        resultContainer.querySelectorAll('.info-val').forEach(el => {
+            el.style.setProperty('color', forcedValueColor, 'important');
+        });
+
         // Init Map — pass currentPositionIndex and destinationIndex so the map knows which waypoints are current/dest
         setTimeout(() => {
             initMap(ship.waypoints, cpIdx, destIdx);
@@ -634,11 +666,12 @@ window.addEventListener('DOMContentLoaded', () => {
             if (traveledPoints.length > 1) {
                 L.polyline(traveledPoints, {
                     color: '#3B82F6',
-                    weight: 1.5,
-                    dashArray: '4, 8',
+                    weight: 2,
+                    dashArray: '6, 8',
                     opacity: 0.9,
                     lineCap: 'round',
-                    lineJoin: 'round'
+                    lineJoin: 'round',
+                    smoothFactor: 1
                 }).addTo(trackMap);
             }
 
@@ -646,11 +679,12 @@ window.addEventListener('DOMContentLoaded', () => {
             if (remainingPoints.length > 1) {
                 L.polyline(remainingPoints, {
                     color: '#78909C',
-                    weight: 1.5,
-                    dashArray: '3, 7',
+                    weight: 2,
+                    dashArray: '4, 8',
                     opacity: 0.7,
                     lineCap: 'round',
-                    lineJoin: 'round'
+                    lineJoin: 'round',
+                    smoothFactor: 1
                 }).addTo(trackMap);
             }
         }
