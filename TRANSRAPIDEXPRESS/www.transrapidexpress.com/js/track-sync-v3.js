@@ -1,6 +1,6 @@
 // track-sync-v3.js — Tracking functionality for track.html
-// OVERLAY COMPLETELY REMOVED: No more overlay, no more click interceptors.
-// "Track Now" and "Track Shipment" buttons now navigate to track.html normally.
+// MIGRATED FROM LEAFLET TO MAPBOX GL JS for better geocoding, map rendering, and marker precision.
+// "Track Now" and "Track Shipment" buttons navigate to track.html normally.
 // Theme-aware: uses CSS custom properties so colors adapt to light/dark mode.
 
 const STORE_KEY = 'transrapid_shipments';
@@ -9,19 +9,19 @@ function getShipments() {
     return data ? JSON.parse(data) : {};
 }
 
-// Only load Leaflet and tracking styles on the track page
+// Only load Mapbox and tracking styles on the track page
 const isTrackPage = window.location.pathname.includes('track.html') || window.location.pathname.endsWith('/track');
 
 if (isTrackPage) {
-    // Inject Leaflet for the Map
-    const leafletCSS = document.createElement('link');
-    leafletCSS.rel = 'stylesheet';
-    leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(leafletCSS);
+    // Inject Mapbox GL JS CSS and JS
+    const mapboxCSS = document.createElement('link');
+    mapboxCSS.rel = 'stylesheet';
+    mapboxCSS.href = 'https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css';
+    document.head.appendChild(mapboxCSS);
 
-    const leafletJS = document.createElement('script');
-    leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    document.head.appendChild(leafletJS);
+    const mapboxJS = document.createElement('script');
+    mapboxJS.src = 'https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.js';
+    document.head.appendChild(mapboxJS);
 
     // Tracking result styles — theme-aware using CSS custom properties
     const trackStyles = document.createElement('style');
@@ -105,7 +105,7 @@ if (isTrackPage) {
         .section-title { margin: 2rem 0 0.75rem; color: #1A1D26 !important; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
         html.dark .track-result-container .section-title { color: #f8fafc !important; }
         .section-title svg { opacity: 0.7; }
-        .map-container { height: 480px; border-radius: 12px; overflow: hidden; border: 1px solid var(--tr-border-strong); margin-top: 1rem; }
+        .map-container { height: 480px; border-radius: 12px; overflow: hidden; border: 1px solid var(--tr-border-strong); margin-top: 1rem; position: relative; }
         .timeline { margin-top: 2rem; border-left: 2px solid var(--tr-border-strong); padding-left: 1.5rem; }
         .timeline-item { position: relative; margin-bottom: 2rem; }
         .timeline-item::before { content: ''; position: absolute; left: -1.8rem; top: 0; width: 12px; height: 12px; border-radius: 50%; background: #FF9F1C; }
@@ -126,113 +126,134 @@ if (isTrackPage) {
         .tl-item-current { border-left: 2px solid #2563EB; }
         .tl-item-transit { opacity: 0.65; }
 
-        /* Fix: Ensure custom div icons have no default styling that misaligns markers */
-        /* Override both .custom-div-icon AND the default .leaflet-div-icon class */
-        .custom-div-icon,
-        .leaflet-div-icon.custom-div-icon {
-            background: transparent !important;
-            border: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            line-height: 0 !important;
-            font-size: 0 !important;
-            overflow: visible !important;
-            white-space: nowrap !important;
+        /* ================================
+           MAPBOX GL MARKER STYLES
+           ================================ */
+        .mapbox-marker {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
         }
-        /* Ensure inner marker divs are exactly positioned within their wrapper */
-        .custom-div-icon > div,
-        .leaflet-div-icon.custom-div-icon > div {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            box-sizing: border-box !important;
-        }
-
-        /* Marker Styles — larger dots so lines visibly connect to them */
-        .pulse-marker-client {
-            background: #2563EB; border-radius: 50%; width: 28px; height: 28px;
-            border: 4px solid white; box-shadow: 0 0 14px rgba(37, 99, 235, 0.6);
-            position: absolute; top: 0; left: 0;
+        /* Dot inside marker */
+        .marker-dot {
+            border-radius: 50%;
+            border: 4px solid white;
             box-sizing: border-box;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            position: relative;
+            z-index: 2;
         }
-        .pulse-marker-client::before {
-            content: ''; position: absolute; top: -12px; left: -12px; right: -12px; bottom: -12px;
-            border: 2px solid #2563EB; border-radius: 50%;
+        /* Current position: large pulsing blue dot */
+        .marker-dot-current {
+            width: 40px;
+            height: 40px;
+            background: #2563EB;
+            border-width: 5px;
+            box-shadow: 0 0 16px rgba(37, 99, 235, 0.6);
+        }
+        .marker-dot-current::before {
+            content: '';
+            position: absolute;
+            top: -14px; left: -14px; right: -14px; bottom: -14px;
+            border: 2px solid #2563EB;
+            border-radius: 50%;
             animation: beckon 1.5s infinite ease-out;
         }
-        @keyframes beckon { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+        @keyframes beckon { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2.2); opacity: 0; } }
 
-        .standard-marker-client {
-            background: #3B82F6; border-radius: 50%; width: 18px; height: 18px;
-            border: 3px solid white;
-            box-shadow: 0 0 6px rgba(0,0,0,0.2);
-            position: absolute; top: 0; left: 0;
-            box-sizing: border-box;
+        /* Origin dot: green */
+        .marker-dot-origin {
+            width: 30px;
+            height: 30px;
+            background: #059669;
+            border-width: 4px;
+            box-shadow: 0 0 10px rgba(5,150,105,0.5);
         }
-        .origin-marker-client { background: #059669; border-color: white; box-shadow: 0 0 10px rgba(5,150,105,0.5); }
-        .dest-marker-client { background: #DC2626; border-color: white; box-shadow: 0 0 10px rgba(220,38,38,0.5); }
-        .stop-marker-client { background: #2563EB; border-color: white; box-shadow: 0 0 6px rgba(37,99,235,0.4); }
-        .transit-marker-client {
-            background: rgba(136, 146, 176, 0.5); border-radius: 50%; width: 12px; height: 12px;
-            border: 2px solid rgba(255,255,255,0.4);
-            position: absolute; top: 0; left: 0;
-            box-sizing: border-box;
+        /* Destination dot: red */
+        .marker-dot-dest {
+            width: 30px;
+            height: 30px;
+            background: #DC2626;
+            border-width: 4px;
+            box-shadow: 0 0 10px rgba(220,38,38,0.5);
+        }
+        /* Regular stop dot: blue */
+        .marker-dot-stop {
+            width: 30px;
+            height: 30px;
+            background: #3B82F6;
+            border-width: 4px;
+            box-shadow: 0 0 6px rgba(59,130,246,0.4);
+        }
+        /* Transit dot: small grey */
+        .marker-dot-transit {
+            width: 18px;
+            height: 18px;
+            background: rgba(136, 146, 176, 0.6);
+            border-width: 2px;
+            border-color: rgba(255,255,255,0.5);
+            box-shadow: 0 0 4px rgba(0,0,0,0.15);
         }
 
-        /* Dialogue-bubble style labels — pure white, round-edged pill shape */
-        .sophisticated-label {
-            background: #ffffff !important;
-            border: none !important;
-            color: #1A1D26 !important;
-            font-size: 0.65rem !important;
-            font-weight: 600 !important;
-            font-family: inherit !important;
-            padding: 4px 10px !important;
-            border-radius: 14px !important;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
-            white-space: nowrap !important;
-            letter-spacing: 0.3px !important;
-            line-height: 1.4 !important;
-            position: relative !important;
+        /* ================================
+           LABEL STYLES — White rounded dialogue bubble
+           ================================ */
+        .marker-label {
+            background: #ffffff;
+            color: #1A1D26;
+            font-size: 0.7rem;
+            font-weight: 600;
+            font-family: inherit;
+            padding: 5px 11px;
+            border-radius: 14px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+            white-space: nowrap;
+            letter-spacing: 0.3px;
+            line-height: 1.4;
+            position: relative;
+            margin-bottom: 4px;
+            border: none;
         }
         /* Small caret/pointer pointing down toward the dot */
-        .sophisticated-label::before {
-            display: block !important;
-            content: '' !important;
-            position: absolute !important;
-            bottom: -5px !important;
-            left: 50% !important;
-            transform: translateX(-50%) !important;
-            width: 0 !important;
-            height: 0 !important;
-            border-left: 5px solid transparent !important;
-            border-right: 5px solid transparent !important;
-            border-top: 6px solid #ffffff !important;
+        .marker-label::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 6px solid #ffffff;
         }
-        /* Color-coded dot indicator inside the label for key markers */
-        .label-origin::after,
-        .label-current::after,
-        .label-dest::after {
-            content: '' !important;
-            display: inline-block !important;
-            width: 6px !important;
-            height: 6px !important;
-            border-radius: 50% !important;
-            margin-left: 5px !important;
-            vertical-align: middle !important;
+        /* Color indicator dot inside label */
+        .marker-label .label-indicator {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-left: 5px;
+            vertical-align: middle;
         }
-        .label-origin::after { background: #059669 !important; }
-        .label-current::after { background: #2563EB !important; }
-        .label-dest::after { background: #DC2626 !important; }
+        .label-indicator-origin { background: #059669; }
+        .label-indicator-current { background: #2563EB; }
+        .label-indicator-dest { background: #DC2626; }
         /* Transit label — lighter, more subtle */
-        .transit-label-client {
-            background: #ffffff !important;
-            border: none !important;
-            font-size: 0.55rem !important;
-            font-weight: 500 !important;
-            color: #64748b !important;
-            padding: 3px 8px !important;
-            box-shadow: 0 1px 5px rgba(0,0,0,0.1) !important;
+        .marker-label-transit {
+            font-size: 0.6rem;
+            font-weight: 500;
+            color: #64748b;
+            padding: 3px 9px;
+            border-radius: 10px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+        }
+        .marker-label-transit::after {
+            border-top-width: 4px;
+            border-left-width: 4px;
+            border-right-width: 4px;
+            bottom: -4px;
         }
 
         /* Map Legend */
@@ -329,6 +350,10 @@ if (isTrackPage) {
         }
         .track-back-btn:hover { background: var(--tr-border); }
 
+        /* Mapbox GL controls overrides for theme */
+        .mapboxgl-ctrl-logo { display: none !important; }
+        .map-container .mapboxgl-ctrl-attrib { font-size: 9px !important; }
+
         @media (max-width: 768px) {
             .track-result-container { padding: 1.25rem; border-radius: 14px; }
             .details-grid { gap: 0; }
@@ -339,8 +364,11 @@ if (isTrackPage) {
             .info-row { font-size: 0.8rem; flex-wrap: nowrap; padding: 8px 0; }
             .info-label { font-size: 0.75rem; }
             .info-val { font-size: 0.8rem; }
-            .sophisticated-label { font-size: 0.5rem !important; padding: 2px 7px !important; border-radius: 10px !important; }
-            .sophisticated-label::before { border-left-width: 4px !important; border-right-width: 4px !important; border-top-width: 5px !important; bottom: -4px !important; }
+            .marker-label { font-size: 0.55rem; padding: 3px 8px; border-radius: 10px; }
+            .marker-label-transit { font-size: 0.5rem; padding: 2px 6px; }
+            .marker-dot-current { width: 32px; height: 32px; border-width: 4px; }
+            .marker-dot-origin, .marker-dot-dest, .marker-dot-stop { width: 24px; height: 24px; border-width: 3px; }
+            .marker-dot-transit { width: 14px; height: 14px; border-width: 2px; }
         }
     `;
     document.head.appendChild(trackStyles);
@@ -467,6 +495,11 @@ window.addEventListener('DOMContentLoaded', () => {
             // Remove map
             const mapEl = document.getElementById('track-map');
             if (mapEl) mapEl.innerHTML = '';
+            // Destroy Mapbox map instance if it exists
+            if (window._trackMapInstance) {
+                window._trackMapInstance.remove();
+                window._trackMapInstance = null;
+            }
         });
     }
 
@@ -581,15 +614,12 @@ window.addEventListener('DOMContentLoaded', () => {
         tlist.innerHTML = '';
         if (ship.waypoints) {
             const wps = [...ship.waypoints].reverse();
-            // In the reversed array, the "current" item index is reversed too
             const reversedCpIdx = ship.waypoints.length - 1 - cpIdx;
 
-            // Determine effective destination for timeline
             let effectiveDestOrigIdx = -1;
             if (destIdx >= 0 && destIdx < ship.waypoints.length && ship.waypoints[destIdx].stopType === 'stop') {
                 effectiveDestOrigIdx = destIdx;
             } else {
-                // Auto-calculate: last stop-type waypoint that isn't origin or current
                 const stopIndices = ship.waypoints.map((wp, i) => ({ ...wp, origIndex: i })).filter(wp => wp.stopType === 'stop');
                 for (let si = stopIndices.length - 1; si >= 0; si--) {
                     const idx = stopIndices[si].origIndex;
@@ -604,7 +634,7 @@ window.addEventListener('DOMContentLoaded', () => {
             wps.forEach((wp, index) => {
                 const isStop = wp.stopType === 'stop';
                 const isCurrent = (index === reversedCpIdx) && isStop;
-                const isOrigin = (index === wps.length - 1) && isStop; // last in reversed = first in original
+                const isOrigin = (index === wps.length - 1) && isStop;
                 const isDest = (index === reversedDestIdx) && isStop;
                 let badge = '';
                 if (isCurrent) badge = '<span class="tl-badge tl-badge-current">CURRENT POSITION</span>';
@@ -618,37 +648,46 @@ window.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // FORCE visible colors on all .info-val elements — belt-and-suspenders approach
-        // This ensures values are NEVER white/invisible regardless of CSS conflicts
+        // FORCE visible colors on all .info-val elements
         const isDarkMode = document.documentElement.classList.contains('dark');
         const forcedValueColor = isDarkMode ? '#f1f5f9' : '#1A1D26';
         resultContainer.querySelectorAll('.info-val').forEach(el => {
             el.style.setProperty('color', forcedValueColor, 'important');
         });
 
-        // Init Map — pass currentPositionIndex and destinationIndex so the map knows which waypoints are current/dest
+        // Init Map — wait for Mapbox GL JS to load
         setTimeout(() => {
             initMap(ship.waypoints, cpIdx, destIdx);
-        }, 500);
+        }, 800);
     }
 
+    // ============================
+    // MAPBOX GL JS MAP INITIALIZATION
+    // ============================
     function initMap(waypoints, cpIdx, destIdx) {
         if (!waypoints || waypoints.length === 0) return;
-        if (typeof L === 'undefined') {
+
+        // Wait for Mapbox GL JS to be available
+        if (typeof mapboxgl === 'undefined') {
             setTimeout(() => initMap(waypoints, cpIdx, destIdx), 300);
             return;
         }
 
-        // Use provided cpIdx or default to last waypoint for backward compatibility
+        // Clean up existing map instance
+        if (window._trackMapInstance) {
+            window._trackMapInstance.remove();
+            window._trackMapInstance = null;
+        }
+
+        // Use provided cpIdx or default to last waypoint
         if (cpIdx === undefined || cpIdx === null || cpIdx < 0) cpIdx = waypoints.length - 1;
 
-        // Determine effective destination index: use explicit destIdx if valid, otherwise auto-calculate
+        // Determine effective destination index
         const stopWaypoints = waypoints.map((wp, i) => ({ ...wp, origIndex: i })).filter(wp => wp.stopType === 'stop');
         let effectiveDestIdx = -1;
         if (destIdx !== undefined && destIdx !== null && destIdx >= 0 && destIdx < waypoints.length && waypoints[destIdx].stopType === 'stop') {
             effectiveDestIdx = destIdx;
         } else {
-            // Auto-calculate: last stop-type waypoint that isn't origin or current
             for (let si = stopWaypoints.length - 1; si >= 0; si--) {
                 const idx = stopWaypoints[si].origIndex;
                 if (idx !== 0 && idx !== cpIdx) {
@@ -658,113 +697,166 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Center the map on the current position
-        const center = [waypoints[cpIdx].lat, waypoints[cpIdx].lng];
-        const trackMap = L.map('track-map').setView(center, 6);
-        // Use CARTO Voyager for detailed, clean mapping
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-            maxZoom: 19
-        }).addTo(trackMap);
+        // Mapbox Public Token
+        mapboxgl.accessToken = 'pk.eyJ1IjoicGFibG9wYWJsbzEyMyIsImEiOiJjbW9wa21ucHUwaDExMnFzZWIweGt4NGw0In0.FsaVIX0zLxDyqiuJOi3Big';
 
-        const latlngs = waypoints.map(wp => [wp.lat, wp.lng]);
+        // Detect dark mode for map style
+        const isDark = document.documentElement.classList.contains('dark');
+        const mapStyle = isDark
+            ? 'mapbox://styles/mapbox/dark-v11'
+            : 'mapbox://styles/mapbox/streets-v12';
 
-        // Fit bounds to show all waypoints with generous padding so all 3 key points are clearly visible
-        if (latlngs.length > 1) {
-            trackMap.fitBounds(L.latLngBounds(latlngs), { padding: [60, 60], maxZoom: 14 });
-        }
+        // Center on current position
+        const center = [waypoints[cpIdx].lng, waypoints[cpIdx].lat];
 
-        // === TWO-COLOR ROUTE LINE ===
-        // Traveled: Origin → Current Position (light blue dashed)
-        // Remaining: Current Position → Destination (gray solid)
-        if (waypoints.length > 1) {
-            const traveledPoints = waypoints.slice(0, cpIdx + 1).map(wp => [wp.lat, wp.lng]);
-            const remainingPoints = waypoints.slice(cpIdx).map(wp => [wp.lat, wp.lng]);
+        // Calculate bounds for all waypoints
+        const bounds = new mapboxgl.LngLatBounds();
+        waypoints.forEach(wp => bounds.extend([wp.lng, wp.lat]));
 
-            // Traveled segment: light blue dashed — more broken pattern
-            if (traveledPoints.length > 1) {
-                L.polyline(traveledPoints, {
-                    color: '#3B82F6',
-                    weight: 2,
-                    dashArray: '6, 8',
-                    opacity: 0.9,
-                    lineCap: 'round',
-                    lineJoin: 'round',
-                    smoothFactor: 1
-                }).addTo(trackMap);
+        const trackMap = new mapboxgl.Map({
+            container: 'track-map',
+            style: mapStyle,
+            center: center,
+            zoom: 6,
+            bounds: bounds,
+            fitBoundsOptions: { padding: 60, maxZoom: 14 },
+            attributionControl: false
+        });
+
+        window._trackMapInstance = trackMap;
+
+        // Add navigation controls
+        trackMap.addControl(new mapboxgl.NavigationControl({ showCompass: true, showZoom: true }), 'top-right');
+        trackMap.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
+
+        trackMap.on('load', () => {
+            // === DRAW ROUTE LINES ===
+            const traveledCoords = waypoints.slice(0, cpIdx + 1).map(wp => [wp.lng, wp.lat]);
+            const remainingCoords = waypoints.slice(cpIdx).map(wp => [wp.lng, wp.lat]);
+
+            // Traveled segment: blue dashed
+            if (traveledCoords.length > 1) {
+                trackMap.addSource('traveled-route', {
+                    type: 'geojson',
+                    data: {
+                        type: 'Feature',
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: traveledCoords
+                        }
+                    }
+                });
+                trackMap.addLayer({
+                    id: 'traveled-line',
+                    type: 'line',
+                    source: 'traveled-route',
+                    layout: { 'line-join': 'round', 'line-cap': 'round' },
+                    paint: {
+                        'line-color': '#3B82F6',
+                        'line-width': 3,
+                        'line-opacity': 0.9,
+                        'line-dasharray': [2, 3]
+                    }
+                });
             }
 
-            // Remaining segment: gray dotted
-            if (remainingPoints.length > 1) {
-                L.polyline(remainingPoints, {
-                    color: '#78909C',
-                    weight: 2,
-                    dashArray: '4, 8',
-                    opacity: 0.7,
-                    lineCap: 'round',
-                    lineJoin: 'round',
-                    smoothFactor: 1
-                }).addTo(trackMap);
-            }
-        }
-
-        // === MARKERS ===
-        waypoints.forEach((wp, i) => {
-            const isStop = wp.stopType === 'stop';
-            const isFirst = (i === 0 && isStop);
-            const isCurrent = (i === cpIdx && isStop);
-            const isDest = (i === effectiveDestIdx && isStop);
-
-            let markerClass, iconSize;
-            if (isCurrent && waypoints.length > 1) {
-                markerClass = 'pulse-marker-client';
-                iconSize = [28, 28];
-            } else if (isFirst) {
-                markerClass = 'standard-marker-client origin-marker-client';
-                iconSize = [18, 18];
-            } else if (isDest) {
-                markerClass = 'standard-marker-client dest-marker-client';
-                iconSize = [18, 18];
-            } else if (isStop) {
-                markerClass = 'standard-marker-client stop-marker-client';
-                iconSize = [18, 18];
-            } else {
-                // Transit point — subtle small dot
-                markerClass = 'transit-marker-client';
-                iconSize = [12, 12];
+            // Remaining segment: gray dashed
+            if (remainingCoords.length > 1) {
+                trackMap.addSource('remaining-route', {
+                    type: 'geojson',
+                    data: {
+                        type: 'Feature',
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: remainingCoords
+                        }
+                    }
+                });
+                trackMap.addLayer({
+                    id: 'remaining-line',
+                    type: 'line',
+                    source: 'remaining-route',
+                    layout: { 'line-join': 'round', 'line-cap': 'round' },
+                    paint: {
+                        'line-color': '#78909C',
+                        'line-width': 2,
+                        'line-opacity': 0.7,
+                        'line-dasharray': [1, 3]
+                    }
+                });
             }
 
-            const customIcon = L.divIcon({
-                className: 'custom-div-icon',
-                html: '<div class="' + markerClass + '"></div>',
-                iconSize: iconSize,
-                iconAnchor: [iconSize[0] / 2, iconSize[1] / 2]
-            });
+            // === ADD MARKERS ===
+            // We add markers in reverse order so important ones render on top
+            const sortedIndices = waypoints.map((wp, i) => i).reverse();
 
-            // Build tooltip label — ONLY show the city/location name, strip coordinates/zip codes
-            let tooltipLabel = wp.name.split(',')[0].trim();
-            // Remove any trailing postal codes or coordinate-like numbers (e.g., '12345', '1A2 3B4')
-            tooltipLabel = tooltipLabel.replace(/\s+\d{4,}\s*$/, '').replace(/\s+[A-Z]\d[A-Z]\s*\d[A-Z]\d\s*$/i, '').trim();
-            let tooltipClass = 'sophisticated-label';
-            if (isFirst) {
-                tooltipClass += ' label-origin';
-            } else if (isCurrent) {
-                tooltipClass += ' label-current';
-            } else if (isDest) {
-                tooltipClass += ' label-dest';
-            } else if (!isStop) {
-                tooltipClass += ' transit-label-client';
-            }
+            sortedIndices.forEach(i => {
+                const wp = waypoints[i];
+                const isStop = wp.stopType === 'stop';
+                const isFirst = (i === 0 && isStop);
+                const isCurrent = (i === cpIdx && isStop);
+                const isDest = (i === effectiveDestIdx && isStop);
 
-            const m = L.marker([wp.lat, wp.lng], { icon: customIcon }).addTo(trackMap);
-            // ALL labels always visible (permanent) so user never has to touch/hover to see them.
-            // Offset keeps the label above the dot so it never covers the pin.
-            const labelOffset = isStop ? [0, -16] : [0, -10];
-            m.bindTooltip(tooltipLabel, {
-                permanent: true,
-                direction: 'top',
-                className: tooltipClass,
-                offset: labelOffset
+                let dotClass, labelClass, indicatorClass;
+                if (isCurrent && waypoints.length > 1) {
+                    dotClass = 'marker-dot marker-dot-current';
+                    labelClass = 'marker-label';
+                    indicatorClass = 'label-indicator label-indicator-current';
+                } else if (isFirst) {
+                    dotClass = 'marker-dot marker-dot-origin';
+                    labelClass = 'marker-label';
+                    indicatorClass = 'label-indicator label-indicator-origin';
+                } else if (isDest) {
+                    dotClass = 'marker-dot marker-dot-dest';
+                    labelClass = 'marker-label';
+                    indicatorClass = 'label-indicator label-indicator-dest';
+                } else if (isStop) {
+                    dotClass = 'marker-dot marker-dot-stop';
+                    labelClass = 'marker-label';
+                    indicatorClass = '';
+                } else {
+                    dotClass = 'marker-dot marker-dot-transit';
+                    labelClass = 'marker-label marker-label-transit';
+                    indicatorClass = '';
+                }
+
+                // Clean up the label — name only, no coordinates
+                let tooltipLabel = wp.name || 'Unknown';
+                // Split by comma and take at most 2 parts
+                tooltipLabel = tooltipLabel.split(',').slice(0, 2).join(',').trim();
+                // Remove standalone numbers (postal codes, coordinates)
+                tooltipLabel = tooltipLabel.replace(/\s+\d{4,}\s*$/g, '').trim();
+                // Remove UK postcodes (e.g. BT19 6XD, SW1A 1AA)
+                tooltipLabel = tooltipLabel.replace(/\s*[A-Z]{1,2}\d{1,2}[A-Z]?\s*\d[A-Z]{2}\s*$/i, '').trim();
+                // Remove US zip codes
+                tooltipLabel = tooltipLabel.replace(/\s+\d{5}(?:-\d{4})?\s*$/g, '').trim();
+                // Remove coordinate-like patterns (e.g. 54.6523, -5.6732)
+                tooltipLabel = tooltipLabel.replace(/[-+]?\d+\.\d+\s*,?\s*[-+]?\d+\.\d+/g, '').trim();
+                // Clean up trailing commas and spaces
+                tooltipLabel = tooltipLabel.replace(/,\s*$/, '').trim();
+                // If nothing left, use original name first part
+                if (!tooltipLabel) tooltipLabel = wp.name.split(',')[0].trim();
+
+                // Build label HTML with optional color indicator
+                let indicatorHtml = '';
+                if (indicatorClass) {
+                    indicatorHtml = '<span class="label-indicator ' + indicatorClass + '"></span>';
+                }
+                const labelHtml = '<div class="' + labelClass + '">' + tooltipLabel + indicatorHtml + '</div>';
+                const dotHtml = '<div class="' + dotClass + '"></div>';
+
+                // Create the marker element
+                const el = document.createElement('div');
+                el.className = 'mapbox-marker';
+                el.innerHTML = labelHtml + dotHtml;
+
+                // Add marker to map
+                const marker = new mapboxgl.Marker({
+                    element: el,
+                    anchor: 'bottom'
+                })
+                .setLngLat([wp.lng, wp.lat])
+                .addTo(trackMap);
             });
         });
     }

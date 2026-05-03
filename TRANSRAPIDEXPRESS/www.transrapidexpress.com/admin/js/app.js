@@ -198,6 +198,72 @@ async function googlePlaceDetails(placeId) {
     });
 }
 
+// --- Mapbox Geocoding Helpers ---
+const MAPBOX_TOKEN = 'pk.eyJ1IjoicGFibG9wYWJsbzEyMyIsImEiOiJjbW9wa21ucHUwaDExMnFzZWIweGt4NGw0In0.FsaVIX0zLxDyqiuJOi3Big';
+let mapboxApiValid = null;
+
+// Validate Mapbox API by doing a test geocode
+async function validateMapboxApi() {
+    if (mapboxApiValid !== null) return mapboxApiValid;
+    try {
+        const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/London.json?access_token=${MAPBOX_TOKEN}&limit=1`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.features && data.features.length > 0) {
+                console.log('Mapbox API is VALID — high-precision search enabled.');
+                mapboxApiValid = true;
+                return true;
+            }
+        }
+        console.warn('Mapbox API not working. Falling back to other providers.');
+        mapboxApiValid = false;
+        return false;
+    } catch (e) {
+        console.warn('Mapbox API validation failed:', e);
+        mapboxApiValid = false;
+        return false;
+    }
+}
+
+// Mapbox Geocoding — forward geocode an address
+async function mapboxGeocode(query) {
+    try {
+        const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&limit=10&types=address,place,locality,neighborhood,poi`);
+        if (res.ok) {
+            const data = await res.json();
+            return data.features || [];
+        }
+    } catch (e) {
+        console.warn('Mapbox geocoding error:', e);
+    }
+    return [];
+}
+
+// Mapbox Search API (newer, more precise for addresses)
+async function mapboxSearch(query) {
+    try {
+        const res = await fetch(`https://api.mapbox.com/search/searchbox/v1?q=${encodeURIComponent(query)}&access_token=${MAPBOX_TOKEN}&limit=10`);
+        if (res.ok) {
+            const data = await res.json();
+            return data.features || [];
+        }
+    } catch (e) {
+        console.warn('Mapbox Search API error:', e);
+    }
+    return [];
+}
+
+// Build a readable location name from a Mapbox feature
+function buildMapboxLocationName(feature) {
+    if (!feature) return 'Unknown Location';
+    // Use place_name if available, otherwise build from context
+    if (feature.place_name) {
+        // place_name is usually well-formatted, just use it
+        return feature.place_name;
+    }
+    return feature.text || feature.address || 'Unknown Location';
+}
+
 // Show a found location on the map with Add as Stop / Add as Transit buttons
 function showLocationOnMap(lat, lon, locName, zoomLevel) {
     if (!map) return;
@@ -605,6 +671,7 @@ function setupMap() {
         // --- Validate Google Maps API on first map setup ---
         // This runs ONCE and caches the result. If the key is dead, we skip all Google calls.
         validateGoogleMapsApi();
+        validateMapboxApi();
 
         // --- API status indicator (inserted AFTER the map-search row, not inside it) ---
         const searchRow = searchInput.parentElement; // .map-search div
@@ -615,12 +682,15 @@ function setupMap() {
         searchRow.parentNode.insertBefore(apiIndicator, searchRow.nextSibling);
 
         // Show API status after validation completes
-        validateGoogleMapsApi().then(valid => {
-            if (valid) {
+        Promise.all([validateGoogleMapsApi(), validateMapboxApi()]).then(([googleValid, mapboxValid]) => {
+            if (mapboxValid) {
+                apiIndicator.textContent = 'Mapbox: Connected (High Precision)';
+                apiIndicator.style.cssText = 'font-size:0.65rem;padding:3px 8px;border-radius:4px;margin-top:2px;display:block;background:rgba(46,204,113,0.12);color:#059669;';
+            } else if (googleValid) {
                 apiIndicator.textContent = 'Google Maps: Connected';
                 apiIndicator.style.cssText = 'font-size:0.65rem;padding:3px 8px;border-radius:4px;margin-top:2px;display:block;background:rgba(46,204,113,0.12);color:#059669;';
             } else {
-                apiIndicator.innerHTML = 'Google Maps API not activated — using OpenStreetMap. <a href="https://console.cloud.google.com/apis/library?filter=category:maps" target="_blank" style="color:#D97706;text-decoration:underline;">Enable APIs in Console</a>';
+                apiIndicator.innerHTML = 'Using OpenStreetMap (limited precision). <a href="https://console.cloud.google.com/apis/library?filter=category:maps" target="_blank" style="color:#D97706;text-decoration:underline;">Enable APIs</a>';
                 apiIndicator.style.cssText = 'font-size:0.65rem;padding:3px 8px;border-radius:4px;margin-top:2px;display:block;background:rgba(217,119,6,0.08);color:#B45309;';
             }
         });
@@ -643,7 +713,7 @@ function setupMap() {
 
             autocompleteDropdown = document.createElement('div');
             autocompleteDropdown.id = 'liveAutocompleteDropdown';
-            autocompleteDropdown.style.cssText = 'position:absolute;z-index:10000;background:rgba(255,255,255,0.98);backdrop-filter:blur(12px);border:1px solid rgba(217,119,6,0.3);border-radius:10px;max-height:300px;overflow-y:auto;width:100%;margin-top:2px;box-shadow:0 8px 32px rgba(0,0,0,0.1);';
+            autocompleteDropdown.style.cssText = 'position:absolute;bottom:100%;left:0;z-index:10000;background:rgba(255,255,255,0.98);backdrop-filter:blur(12px);border:1px solid rgba(217,119,6,0.3);border-radius:10px;max-height:250px;overflow-y:auto;width:100%;margin-bottom:4px;box-shadow:0 -4px 24px rgba(0,0,0,0.12);';
 
             items.forEach(item => {
                 const el = document.createElement('div');
@@ -652,14 +722,15 @@ function setupMap() {
                 el.onmouseout = () => el.style.background = 'transparent';
 
                 const isGoogle = !!item.isGoogle;
+                const isMapbox = !!item.isMapbox;
                 const icon = document.createElement('span');
                 icon.style.cssText = 'color:#FF9F1C;font-size:0.85rem;min-width:20px;';
-                icon.innerHTML = isGoogle ? '<i class="fa-solid fa-globe"></i>' : '<i class="fa-solid fa-location-dot"></i>';
+                icon.innerHTML = isMapbox ? '<i class="fa-solid fa-map-location-dot"></i>' : (isGoogle ? '<i class="fa-solid fa-globe"></i>' : '<i class="fa-solid fa-location-dot"></i>');
 
                 const textDiv = document.createElement('div');
-                const shortName = isGoogle ? (item.description || '').split(',').slice(0, 2).join(',') : (item.display_name || '').split(',').slice(0, 2).join(',');
-                const fullName = isGoogle ? (item.description || '') : (item.display_name || '');
-                const typeLabel = isGoogle ? 'Google' : (item.type || 'OSM');
+                const shortName = isMapbox ? ((item.place_name || item.text || '').split(',').slice(0, 2).join(',')) : (isGoogle ? (item.description || '').split(',').slice(0, 2).join(',') : (item.display_name || '').split(',').slice(0, 2).join(','));
+                const fullName = isMapbox ? (item.place_name || item.text || '') : (isGoogle ? (item.description || '') : (item.display_name || ''));
+                const typeLabel = isMapbox ? 'Mapbox' : (isGoogle ? 'Google' : (item.type || 'OSM'));
                 textDiv.innerHTML = `<div style="font-size:0.85rem;font-weight:500;color:#1A1D26;">${shortName}</div><div style="font-size:0.7rem;color:rgba(26,29,38,0.55);">${fullName} <span style="color:rgba(217,119,6,0.7);text-transform:uppercase;font-size:0.6rem;">${typeLabel}</span></div>`;
 
                 el.appendChild(icon);
@@ -667,7 +738,23 @@ function setupMap() {
 
                 el.onclick = async () => {
                     removeAutocompleteDropdown();
-                    if (isGoogle && item.place_id) {
+                    if (isMapbox) {
+                        // Mapbox feature — extract coordinates from center array [lng, lat]
+                        const coords = item.geometry && item.geometry.coordinates;
+                        if (coords) {
+                            const mLon = coords[0];
+                            const mLat = coords[1];
+                            const mName = buildMapboxLocationName(item);
+                            searchInput.value = mName;
+                            showLocationOnMap(mLat, mLon, mName, 16);
+                        } else if (item.center) {
+                            const mLon = item.center[0];
+                            const mLat = item.center[1];
+                            const mName = buildMapboxLocationName(item);
+                            searchInput.value = mName;
+                            showLocationOnMap(mLat, mLon, mName, 16);
+                        }
+                    } else if (isGoogle && item.place_id) {
                         // Google Autocomplete prediction — fetch details then show on map
                         searchInput.value = item.description || '';
                         const place = await googlePlaceDetails(item.place_id);
@@ -699,6 +786,7 @@ function setupMap() {
             });
 
             searchInput.parentElement.style.position = 'relative';
+            searchInput.parentElement.style.zIndex = '100';
             searchInput.parentElement.appendChild(autocompleteDropdown);
 
             // Close on outside click
@@ -723,7 +811,24 @@ function setupMap() {
             }
             autocompleteTimer = setTimeout(async () => {
                 try {
-                    // Try Google first if API is valid
+                    // STRATEGY 1: Mapbox Search API (most precise for addresses)
+                    if (mapboxApiValid === null) await validateMapboxApi();
+                    if (mapboxApiValid) {
+                        const mapboxResults = await mapboxSearch(query);
+                        if (mapboxResults && mapboxResults.length > 0) {
+                            const items = mapboxResults.map(f => ({ ...f, isMapbox: true }));
+                            showAutocompleteDropdown(items);
+                            return;
+                        }
+                        // Also try Mapbox Geocoding API
+                        const mapboxGeoResults = await mapboxGeocode(query);
+                        if (mapboxGeoResults && mapboxGeoResults.length > 0) {
+                            const items = mapboxGeoResults.map(f => ({ ...f, isMapbox: true }));
+                            showAutocompleteDropdown(items);
+                            return;
+                        }
+                    }
+                    // STRATEGY 2: Google Places Autocomplete
                     if (googleApiValid === true) {
                         const predictions = await googleAutocompleteSearch(query);
                         if (predictions && predictions.length > 0) {
@@ -732,7 +837,7 @@ function setupMap() {
                             return;
                         }
                     }
-                    // Fallback: Nominatim
+                    // STRATEGY 3: Nominatim fallback
                     const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`, {
                         headers: { 'Accept-Language': 'en', 'User-Agent': 'TransrapidExpressAdmin/1.0' }
                     });
@@ -746,7 +851,7 @@ function setupMap() {
                 } catch (e) {
                     console.warn('Autocomplete error:', e);
                 }
-            }, 400); // 400ms debounce
+            }, 350); // Reduced debounce for Mapbox (faster API)
         });
 
         // Allow Enter key to search
@@ -767,6 +872,48 @@ function setupMap() {
             searchBtn.disabled = true;
             removeAutocompleteDropdown();
             try {
+                // ========= STRATEGY 0: Mapbox Search API (highest precision) =========
+                if (mapboxApiValid === null) await validateMapboxApi();
+                if (mapboxApiValid) {
+                    let mapboxResults = await mapboxSearch(query);
+                    if (mapboxResults && mapboxResults.length > 0) {
+                        if (mapboxResults.length === 1) {
+                            const feature = mapboxResults[0];
+                            const coords = feature.geometry && feature.geometry.coordinates;
+                            if (coords) {
+                                const mName = buildMapboxLocationName(feature);
+                                showLocationOnMap(coords[1], coords[0], mName, 16);
+                                return;
+                            } else if (feature.center) {
+                                const mName = buildMapboxLocationName(feature);
+                                showLocationOnMap(feature.center[1], feature.center[0], mName, 16);
+                                return;
+                            }
+                        } else {
+                            const items = mapboxResults.map(f => ({ ...f, isMapbox: true }));
+                            showAutocompleteDropdown(items);
+                            return;
+                        }
+                    }
+                    // Also try Mapbox Geocoding API
+                    let mapboxGeoResults = await mapboxGeocode(query);
+                    if (mapboxGeoResults && mapboxGeoResults.length > 0) {
+                        if (mapboxGeoResults.length === 1) {
+                            const feature = mapboxGeoResults[0];
+                            const coords = feature.center || (feature.geometry && feature.geometry.coordinates);
+                            if (coords) {
+                                const mName = buildMapboxLocationName(feature);
+                                showLocationOnMap(coords[1], coords[0], mName, 16);
+                                return;
+                            }
+                        } else {
+                            const items = mapboxGeoResults.map(f => ({ ...f, isMapbox: true }));
+                            showAutocompleteDropdown(items);
+                            return;
+                        }
+                    }
+                }
+
                 // ========= STRATEGY 1: Google Geocoding API (only if validated) =========
                 if (googleApiValid === true) {
                     let googleResults = await googleGeocode(query);
