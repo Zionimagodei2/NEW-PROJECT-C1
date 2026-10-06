@@ -443,16 +443,19 @@ function initApp() {
 
     // --- Authentication Logic ---
     const checkSession = () => {
-        if (sessionStorage.getItem(SESSION_KEY) === 'true') {
-            elements.authOverlay.style.display = 'none';
-            elements.appLayout.style.display = 'flex';
-            setupMap();
-            loadDashboardStats(elements);
-            loadManageRecords(elements);
-            setTimeout(() => { if(map) map.invalidateSize(); }, 500);
+        try {
+            if (sessionStorage.getItem(SESSION_KEY) === 'true') {
+                if (elements.authOverlay) elements.authOverlay.style.display = 'none';
+                if (elements.appLayout) elements.appLayout.style.display = 'flex';
+                try { setupMap(); } catch(e) { console.error('Map setup error:', e); }
+                try { loadDashboardStats(elements); } catch(e) { console.error('Dashboard stats error:', e); }
+                try { loadManageRecords(elements); } catch(e) { console.error('Manage records error:', e); }
+                setTimeout(() => { try { if(map) map.invalidateSize(); } catch(e){} }, 500);
+            }
+        } catch(e) {
+            console.error('Session check error:', e);
         }
     };
-    checkSession();
 
     if (elements.loginBtn) {
         // Allow Enter key on passphrase input
@@ -463,6 +466,7 @@ function initApp() {
         }
 
         elements.loginBtn.addEventListener('click', async () => {
+            if (!elements.adminPassphrase) return;
             const inputVal = elements.adminPassphrase.value.trim();
 
             if (!inputVal) {
@@ -640,13 +644,24 @@ function initApp() {
             }
         });
     }
+
+    // --- Run session check LAST so all event handlers are already bound ---
+    checkSession();
 }
 
 // Run initialization — works whether DOM is already loaded or not
+// Wrapped in try-catch so a single failure doesn't halt all handler binding
+function safeInitApp() {
+    try {
+        initApp();
+    } catch (e) {
+        console.error('initApp error (non-fatal):', e);
+    }
+}
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
+    document.addEventListener('DOMContentLoaded', safeInitApp);
 } else {
-    initApp();
+    safeInitApp();
 }
 
 // --- Map Logic Function ---
