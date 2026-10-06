@@ -21,7 +21,7 @@ function waitForSupabase(timeout = 5000) {
     ]);
 }
 
-const ADMIN_HASH = 'edb4c656c930a9681dd2599f9b842b5bfa6548d196c507d4a80c087d4535a580'; // SHA-256 of Pablopablopablo$
+const ADMIN_HASH = 'b6652dd271d1241717971278dfd9cdfa7b92dbf1c1112c6513d24d62e0aa9c10'; // SHA-256 of Pablopablopablo1$
 const SESSION_KEY = 'transrapid_admin_auth';
 
 // --- Global Variables ---
