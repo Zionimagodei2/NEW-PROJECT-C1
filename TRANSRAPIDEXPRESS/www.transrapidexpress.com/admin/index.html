@@ -10,7 +10,8 @@
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
 <!-- Leaflet CSS for Maps -->
-<link crossorigin="" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" rel="stylesheet">
+<!-- Leaflet CSS — self-hosted (was unpkg CDN) so the map cannot be blocked. Oct 8 2026 -->
+<link href="vendor/leaflet/leaflet.css" rel="stylesheet">
 <!-- Custom CSS -->
 <style>
 /* Inlined admin stylesheet (was css/style.css) — inlined Oct 8 2026 so the page can never render unstyled if the CSS file fails to load */
@@ -805,7 +806,8 @@ SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIn...'" rows="4" style="background: #F0F2F7; b
 </main>
 </div>
 <!-- Leaflet JS -->
-<script crossorigin="" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet JS — self-hosted (was unpkg CDN) so the map cannot be blocked. Oct 8 2026 -->
+<script src="vendor/leaflet/leaflet.js"></script>
 <!-- Google Maps JavaScript API with Places library for worldwide address search -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBdbjOfG1Otkc4Aupy6A-oLJRFEi4IEaNc&libraries=places"></script>
 <!-- FALLBACK LOGIN HANDLER — works even if the main module fails to load -->
@@ -944,5 +946,5 @@ SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIn...'" rows="4" style="background: #F0F2F7; b
 })();
 </script>
 <!-- Main App Module (loads Supabase dynamically, won't block login) -->
-<script src="js/app-20261008d.js" type="module"></script>
+<script src="js/app-20261008e.js" type="module"></script>
 </html>
