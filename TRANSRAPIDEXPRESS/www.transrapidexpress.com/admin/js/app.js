@@ -380,10 +380,12 @@ function initApp() {
         if (sessionStorage.getItem(SESSION_KEY) === 'true') {
             elements.authOverlay.style.display = 'none';
             elements.appLayout.style.display = 'flex';
-            setupMap();
-            loadDashboardStats(elements);
-            loadManageRecords(elements);
-            setTimeout(() => { if(map) map.invalidateSize(); }, 500);
+            // Each subsystem is guarded: a failing map/CDN must never kill
+            // tab navigation or data loading (fixed Oct 8 2026).
+            try { setupMap(); } catch(e) { console.error('Map setup error:', e); }
+            try { loadDashboardStats(elements); } catch(e) { console.error('Dashboard stats error:', e); }
+            try { loadManageRecords(elements); } catch(e) { console.error('Manage records error:', e); }
+            setTimeout(() => { try { if(map) map.invalidateSize(); } catch(e){} }, 500);
         }
     };
     checkSession();
@@ -589,6 +591,13 @@ function setupMap() {
 
     const mapContainer = document.getElementById('adminMap');
     if (!mapContainer) return;
+
+    // If the Leaflet CDN failed to load, skip the map but keep the rest of
+    // the admin panel (tabs, data) fully working. Fixed Oct 8 2026.
+    if (typeof L === 'undefined') {
+        console.warn('Leaflet failed to load — map disabled, admin panel continues without it.');
+        return;
+    }
 
     map = L.map('adminMap').setView([39.8283, -98.5795], 6);
     // Use CARTO Voyager tiles for detailed, clean street-level mapping
@@ -1028,6 +1037,7 @@ window.setDestination = function(index) {
 };
 
 function updateMapDrawings() {
+    if (!map) return; // Map disabled (Leaflet failed to load) — nothing to draw.
     markers.forEach(m => map.removeLayer(m));
     markers.length = 0;
 
