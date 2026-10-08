@@ -921,6 +921,26 @@ SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIn...'" rows="4" style="background: #F0F2F7; b
             sidebarOverlay.classList.remove('active');
         });
     }
+    // Bind tab switching here too — guarantees the nav works even if the
+    // main module script fails to load on a flaky connection. Fixed Oct 8 2026.
+    // (If the module also loads, both handlers run and produce the same result.)
+    var navItemsFb = document.querySelectorAll('.nav-item[data-tab]');
+    var viewSectionsFb = document.querySelectorAll('.view-section');
+    navItemsFb.forEach(function(item) {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            var tabId = item.getAttribute('data-tab');
+            navItemsFb.forEach(function(n) { n.classList.remove('active'); });
+            viewSectionsFb.forEach(function(v) { v.style.display = 'none'; });
+            item.classList.add('active');
+            var targetView = document.getElementById('view-' + tabId);
+            if (targetView) targetView.style.display = 'block';
+            var sb = document.querySelector('.sidebar');
+            var sbo = document.getElementById('sidebarOverlay');
+            if (sb) sb.classList.remove('active');
+            if (sbo) sbo.classList.remove('active');
+        });
+    });
 })();
 </script>
 <!-- Main App Module (loads Supabase dynamically, won't block login) -->
