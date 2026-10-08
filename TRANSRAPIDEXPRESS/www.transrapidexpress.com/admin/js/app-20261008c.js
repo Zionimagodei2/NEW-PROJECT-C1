@@ -21,6 +21,39 @@ function waitForSupabase(timeout = 5000) {
     ]);
 }
 
+// Helper: run a Supabase query with a timeout so a blackholed/slow mobile
+// connection can never hang the dashboard forever. Fixed Oct 8 2026.
+function supabaseQuery(promise, timeoutMs = 12000) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Database request timed out')), timeoutMs))
+    ]);
+}
+
+// Mirror Supabase rows into localStorage so the panel keeps showing the
+// last-known data when the network is slow or the database is unreachable.
+function cacheShipments(rows) {
+    try {
+        const cache = getShipments();
+        rows.forEach(row => { cache[row.tracking_code] = row.data; });
+        localStorage.setItem(STORE_KEY, JSON.stringify(cache));
+    } catch (e) { /* storage full or unavailable — non-fatal */ }
+}
+
+// Update the dashboard sync badge to reflect database reachability.
+function setSyncStatus(ok) {
+    const el = document.getElementById('syncStatus');
+    if (!el) return;
+    if (ok) {
+        el.className = 'trend positive';
+        el.innerHTML = '<i class="fa-solid fa-arrow-up-right-dots"></i> Global sync active';
+    } else {
+        el.className = 'trend';
+        el.style.color = '#B45309';
+        el.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Database unreachable — showing cached data';
+    }
+}
+
 const ADMIN_HASH = 'b6652dd271d1241717971278dfd9cdfa7b92dbf1c1112c6513d24d62e0aa9c10'; // SHA-256 of Pablopablopablo1$
 const SESSION_KEY = 'transrapid_admin_auth';
 
@@ -1227,15 +1260,21 @@ async function loadDashboardStats(elements) {
     // Wait for Supabase import to complete before querying
     await waitForSupabase();
     let shipmentsDB = {};
+    let dbOk = false;
     if (supabase) {
         try {
-            const { data, error } = await supabase.from('shipments').select('*');
+            const { data, error } = await supabaseQuery(supabase.from('shipments').select('*'));
             if (error) console.error('Supabase fetch error:', error);
-            if (data) data.forEach(row => shipmentsDB[row.tracking_code] = row.data);
+            if (data) {
+                data.forEach(row => shipmentsDB[row.tracking_code] = row.data);
+                cacheShipments(data);
+                dbOk = true;
+            }
         } catch(e) {
             console.error('Supabase query failed:', e);
         }
     }
+    setSyncStatus(dbOk);
     // Always merge localStorage data as fallback/supplement
     const localDB = getShipments();
     for (const [code, data] of Object.entries(localDB)) {
@@ -1280,9 +1319,12 @@ async function loadManageRecords(elements) {
     let shipmentsDB = {};
     if (supabase) {
         try {
-            const { data, error } = await supabase.from('shipments').select('*');
+            const { data, error } = await supabaseQuery(supabase.from('shipments').select('*'));
             if (error) console.error('Supabase fetch error:', error);
-            if (data) data.forEach(row => shipmentsDB[row.tracking_code] = row.data);
+            if (data) {
+                data.forEach(row => shipmentsDB[row.tracking_code] = row.data);
+                cacheShipments(data);
+            }
         } catch(e) {
             console.error('Supabase query failed:', e);
         }
@@ -1351,7 +1393,7 @@ window.editShipment = async function(trackingCode) {
     let shipment = null;
     if (supabase) {
         try {
-            const { data, error } = await supabase.from('shipments').select('data').eq('tracking_code', trackingCode).single();
+            const { data, error } = await supabaseQuery(supabase.from('shipments').select('data').eq('tracking_code', trackingCode).single());
             if (error) console.error('Supabase fetch error:', error);
             if (data) shipment = data.data;
         } catch(e) {
